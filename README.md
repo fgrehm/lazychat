@@ -24,6 +24,8 @@ Chat is lossy for multi-decision work:
 
 The protocol is tooling-agnostic. Any agent that reads and writes files, and any human with a text editor, can run it.
 
+See [`examples/2026-04-16T1811-cli-packaging.md`](examples/2026-04-16T1811-cli-packaging.md) for a completed, three-round discussion.
+
 ## Use with Claude Code
 
 Copy or symlink this repo into `~/.claude/skills/lazychat/`. The `SKILL.md` declares when Claude Code should load it.
@@ -31,6 +33,16 @@ Copy or symlink this repo into `~/.claude/skills/lazychat/`. The `SKILL.md` decl
 ## Use with other agents
 
 `SKILL.md` content is agent-agnostic. The frontmatter follows Claude Code's convention; the body is just the protocol. Adapt the wrapper for pi.dev or whatever agent you use.
+
+## Related work
+
+lazychat sits next to a handful of projects that use shared markdown files as agent state, but differs in focus:
+
+- [tick-md](https://purplehorizons.io/blog/tick-md-multi-agent-coordination-markdown) — multi-agent coordination via a shared markdown task board. Agent-to-agent, with file locking, an MCP server, and a dashboard.
+- [llm-md](https://llm.md/) — a DSL for LLM-to-LLM conversations in markdown. Structured agent turns with explicit syntax.
+- Basic Memory — bidirectional LLM-markdown knowledge persistence via MCP. Knowledge-graph shape, not discussion shape.
+
+lazychat is narrower: human plus agent, freeform replies, explicit stop-and-wait, file-as-record. Email thread between a person and an agent, not a shared state layer between agents.
 
 ## Status
 
