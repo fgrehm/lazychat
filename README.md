@@ -26,13 +26,16 @@ The protocol is tooling-agnostic. Any agent that reads and writes files, and any
 
 See [`examples/2026-04-16T1811-cli-packaging.md`](examples/2026-04-16T1811-cli-packaging.md) for a completed, three-round discussion.
 
-## Use with Claude Code
+## Installation
 
-Copy or symlink this repo into `~/.claude/skills/lazychat/`. The `SKILL.md` declares when Claude Code should load it.
+`SKILL.md` content is agent-agnostic. The frontmatter follows Claude Code's convention and the body is just the protocol. You can adapt it to your needs and adjust the template as needed too.
 
-## Use with other agents
-
-`SKILL.md` content is agent-agnostic. The frontmatter follows Claude Code's convention; the body is just the protocol. Adapt the wrapper for pi.dev or whatever agent you use.
+```bash
+# Pick your coding agent flavour
+AGENT='claude'
+mkdir -p "${AGENT}/skills/lazychat"
+wget -o ...
+```
 
 ## Related work
 
@@ -46,7 +49,7 @@ lazychat is narrower: human plus agent, freeform replies, explicit stop-and-wait
 
 ## Status
 
-v0, distilled from a day of real use with pi.dev and Claude Code. Deliberately minimal. The longer spec with rounds, reply vocabulary, round types, and lifecycle rules was considered and cut because it was not load-bearing in practice.
+v0, distilled from two days of real use with pi.dev and Claude Code. Deliberately minimal. A longer spec with rounds, reply vocabulary, round types, and lifecycle rules was considered and cut but might be added later.
 
 ## License
 
