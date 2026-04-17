@@ -32,9 +32,12 @@ See [`examples/2026-04-16T1811-cli-packaging.md`](examples/2026-04-16T1811-cli-p
 
 ```bash
 # Pick your coding agent flavour
-AGENT='claude'
-mkdir -p "${AGENT}/skills/lazychat"
-wget -o ...
+SKILL='.claude/skills/lazychat'
+mkdir -p "${SKILL}/templates"
+wget https://github.com/fgrehm/lazychat/raw/refs/tags/v0.0.1/SKILL.md \
+  -O "${SKILL}/SKILL.md"
+wget https://github.com/fgrehm/lazychat/raw/refs/tags/v0.0.1/templates/discussion.md \
+  -O "${SKILL}/templates/discussion.md"
 ```
 
 ## Related work
