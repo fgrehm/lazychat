@@ -15,6 +15,8 @@ Chat is lossy for multi-decision work:
 - **No persistent artifact.** Chat transcripts are hard to revisit. A file can be re-opened, git-tracked, and referenced later.
 - **Proposals get paraphrased on reply.** The agent cannot verify its own proposal landed intact.
 
+Check out [this blog post](https://fabiorehm.com/blog/2026/04/17/lazychat/) to know more about how this came to be.
+
 ## How it works
 
 1. Agent creates a file at `.lazyai/YYYY-MM-DDTHHMM-topic.md` from the template in `templates/discussion.md`.
