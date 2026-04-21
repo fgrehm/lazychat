@@ -14,7 +14,7 @@ The key words MUST, MUST NOT, SHOULD, and MAY in this document are to be interpr
 1. **Create the file** at `.lazyai/YYYY-MM-DDTHHMM-<topic-slug>.md` in the current working tree, using the template below. Fill in the topic and the one-paragraph context comment.
 2. **Write questions, proposals, or drafts** in the file. Freeform. Number points, quote options, include diffs, whatever serves clarity.
 3. **Stop and tell the user in chat** that the file is ready at `<path>`. You MUST NOT keep writing past the current round.
-4. **Wait.** The user may reply in minutes, hours or days. Do not nudge.
+4. **Wait.** The user may reply in minutes, hours, or days. Do not nudge.
 5. **Re-read the file end-to-end** when the user signals they have replied. Do not skim. The file is the source of truth.
 6. **Continue** in the same file. When the discussion has converged, write a final `## Outcome` section summarizing the decisions, flip frontmatter `status` to `converged`, and apply the outcome to the canonical artifact. The discussion file stays as the record.
 
@@ -33,8 +33,7 @@ status: open
 
 ---
 
-<!-- Agent writes below. See SKILL.md for conventions.
-     Completed example: https://github.com/fgrehm/lazychat/blob/main/examples/2026-04-16T1811-cli-packaging.md -->
+<!-- Agent writes below. -->
 ```
 
 ## Conventions

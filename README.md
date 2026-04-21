@@ -52,7 +52,7 @@ lazychat is narrower: human plus agent, freeform replies, explicit stop-and-wait
 
 ## Status
 
-Distilled from real use with pi coding agent and Claude Code. Deliberately minimal. Earlier drafts included reply vocabulary, round types, and a multi-state lifecycle and  those were cut.
+Distilled from real use with pi coding agent and Claude Code. Deliberately minimal. Earlier drafts included reply vocabulary, round types, and a multi-state lifecycle. Those were cut.
 
 v0.0.2 added back the pieces that kept earning their keep (numbered turn headers, `open` / `converged` status). More may land later, but only when the pain is concrete.
 
