@@ -19,14 +19,14 @@ Check out [this blog post](https://fabiorehm.com/blog/2026/04/17/lazychat/) to k
 
 ## How it works
 
-1. Agent creates a file at `.lazyai/YYYY-MM-DDTHHMM-topic.md` from the template in `templates/discussion.md`.
+1. Agent creates a file at `.lazyai/YYYY-MM-DDTHHMM-topic.md` from the template embedded into the skill itself.
 2. Agent writes questions, proposals, or drafts in the file, then stops and tells you.
 3. You reply in the file, freeform. No required structure. No reply vocabulary.
 4. Agent reads the file back in full and continues.
 
 The protocol is tooling-agnostic. Any agent that reads and writes files, and any human with a text editor, can run it.
 
-See [`examples/2026-04-16T1811-cli-packaging.md`](examples/2026-04-16T1811-cli-packaging.md) for a completed, three-round discussion.
+See [`examples/`](examples/) for completed threads from lazychat's own design sessions.
 
 ## Installation
 
@@ -35,11 +35,9 @@ See [`examples/2026-04-16T1811-cli-packaging.md`](examples/2026-04-16T1811-cli-p
 ```bash
 # Pick your coding agent flavour
 SKILL='.claude/skills/lazychat'
-mkdir -p "${SKILL}/templates"
-wget https://github.com/fgrehm/lazychat/raw/refs/tags/v0.0.1/SKILL.md \
+mkdir -p "${SKILL}"
+wget https://github.com/fgrehm/lazychat/raw/refs/tags/v0.0.2/SKILL.md \
   -O "${SKILL}/SKILL.md"
-wget https://github.com/fgrehm/lazychat/raw/refs/tags/v0.0.1/templates/discussion.md \
-  -O "${SKILL}/templates/discussion.md"
 ```
 
 ## Related work
@@ -54,7 +52,9 @@ lazychat is narrower: human plus agent, freeform replies, explicit stop-and-wait
 
 ## Status
 
-v0, distilled from two days of real use with pi.dev and Claude Code. Deliberately minimal. A longer spec with rounds, reply vocabulary, round types, and lifecycle rules was considered and cut but might be added later.
+Distilled from real use with pi coding agent and Claude Code. Deliberately minimal. Earlier drafts included reply vocabulary, round types, and a multi-state lifecycle and  those were cut.
+
+v0.0.2 added back the pieces that kept earning their keep (numbered turn headers, `open` / `converged` status). More may land later, but only when the pain is concrete.
 
 ## License
 
