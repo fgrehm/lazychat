@@ -15,6 +15,8 @@ Chat is lossy for multi-decision work:
 - **No persistent artifact.** Chat transcripts are hard to revisit. A file can be re-opened, git-tracked, and referenced later.
 - **Proposals get paraphrased on reply.** The agent cannot verify its own proposal landed intact.
 
+Chat is also harder on people who can't keep its pace. Rapid-fire messaging expects real-time reading, fast typing, and uninterrupted attention; a markdown thread does not. You can walk away, read with a screen reader, take hours to compose a reply, and the agent waits without nagging. That matters for your own focus, and it genuinely helps folks with cognitive, motor, visual, or energy-related disabilities who are not well-served by real-time tooling.
+
 Check out [this blog post](https://fabiorehm.com/blog/2026/04/17/lazychat/) to know more about how this came to be.
 
 ## How it works
