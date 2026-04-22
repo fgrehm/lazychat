@@ -60,4 +60,3 @@ status: open
 - Code review (use `git diff` or a review tool).
 - Tasks where the user is actively present and driving.
 - Tasks with no branching decisions.
-
