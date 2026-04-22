@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## Unreleased
+## v0.0.2 - 2026-04-22
 
 ### Added
 
@@ -22,6 +22,6 @@
 
 - `templates/discussion.md` (contents inlined into `SKILL.md`).
 
-## v0.0.1 — 2026-04-17
+## v0.0.1 - 2026-04-17
 
 Initial release.
