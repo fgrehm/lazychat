@@ -1,0 +1,43 @@
+{
+  "name": "lazychat",
+  "version": "0.0.3-dev",
+  "description": "File-based async discussion protocol, as a TypeScript library and CLI.",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "bun@1.3.13",
+  "bin": {
+    "lazychat": "src/cli/index.ts"
+  },
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "SKILL.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "bun test",
+    "test:unit": "bun test src/thread",
+    "test:integration": "bun test src/cli",
+    "build": "bun build --compile --target=bun --outfile dist/lazychat src/cli/index.ts",
+    "clean": "rm -rf dist",
+    "fmt": "bunx prettier --write \"src/**/*.ts\"",
+    "typecheck": "bunx tsc --noEmit",
+    "install:local": "bun run build && mkdir -p \"$HOME/.local/bin\" && ln -sf \"$PWD/dist/lazychat\" \"$HOME/.local/bin/lazychat\"",
+    "uninstall:local": "rm -f \"$HOME/.local/bin/lazychat\"",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,json,yml,yaml}": "prettier --write"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3",
+    "typescript": "^5"
+  }
+}
