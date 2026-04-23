@@ -1,1 +1,4 @@
 .lazyai/
+node_modules/
+dist/
+*.log
