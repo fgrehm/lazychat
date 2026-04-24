@@ -1,4 +1,14 @@
-import { join } from "node:path";
+import { randomBytes } from "node:crypto";
+import {
+  mkdir,
+  readdir,
+  rename,
+  stat,
+  unlink,
+  utimes,
+  writeFile,
+} from "node:fs/promises";
+import { dirname, join } from "node:path";
 
 export type Role = "agent" | "human";
 export type Status = "open" | "converged";
@@ -122,37 +132,131 @@ export function parseBytes(path: string, data: string): Thread {
 }
 
 // ---------------------------------------------------------------------------
-// I/O layer — implemented in step 2
+// I/O layer
 // ---------------------------------------------------------------------------
 
-export async function parse(_path: string): Promise<Thread> {
-  throw new Error("not implemented");
+async function atomicWrite(path: string, content: string): Promise<void> {
+  const dir = dirname(path);
+  const tmp = join(dir, `.tmp-${randomBytes(6).toString("hex")}`);
+  try {
+    await writeFile(tmp, content, "utf8");
+    await rename(tmp, path);
+  } catch (e) {
+    try {
+      await unlink(tmp);
+    } catch {
+      // ignore cleanup failure
+    }
+    throw e;
+  }
+}
+
+export async function parse(path: string): Promise<Thread> {
+  const data = await Bun.file(path).text();
+  const { mtime } = await stat(path);
+  const thread = parseBytes(path, data);
+  thread.updatedAt = mtime;
+  return thread;
 }
 
 export async function newThread(
-  _path: string,
-  _topic: string,
-  _context: string,
+  path: string,
+  topic: string,
+  context: string,
 ): Promise<void> {
-  throw new Error("not implemented");
+  try {
+    await stat(path);
+    throw new Error(`${path}: file already exists`);
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+  }
+
+  await mkdir(dirname(path), { recursive: true });
+
+  const content = `---\nstatus: open\n---\n\n# ${topic}\n\n<!-- ${context} -->\n`;
+  await atomicWrite(path, content);
 }
 
 export async function appendTurn(
-  _path: string,
-  _role: Role,
-  _model: string,
-  _body: string,
+  path: string,
+  role: Role,
+  model: string,
+  body: string,
 ): Promise<number> {
-  throw new Error("not implemented");
+  const data = await Bun.file(path).text();
+  const thread = parseBytes(path, data);
+
+  if (thread.status === "converged") {
+    throw new Error(`${path}: thread is converged; cannot append turn`);
+  }
+
+  const round = nextRound(thread.turns, role);
+  const effectiveModel = role === "agent" ? model || "unknown" : "";
+  const attr = effectiveModel ? ` — @${effectiveModel}` : "";
+  const header = `## Round ${round} (${role})${attr}`;
+
+  const newContent =
+    data.trimEnd() + `\n\n---\n\n${header}\n\n${body.trimEnd()}\n`;
+  await atomicWrite(path, newContent);
+  return round;
 }
 
-export async function converge(_path: string, _body: string): Promise<void> {
-  throw new Error("not implemented");
+export async function converge(path: string, body: string): Promise<void> {
+  const data = await Bun.file(path).text();
+  const thread = parseBytes(path, data);
+
+  if (thread.status === "converged") {
+    throw new Error(`${path}: thread is already converged`);
+  }
+
+  let newContent =
+    data.trimEnd() + `\n\n---\n\n## Outcome\n\n${body.trimEnd()}\n`;
+  newContent = newContent.replace(/^status: open\s*$/m, "status: converged");
+
+  await atomicWrite(path, newContent);
 }
 
 export async function listThreads(
-  _dir: string,
-  _filter: ListFilter = "open",
+  dir: string,
+  filter: ListFilter = "open",
 ): Promise<Summary[]> {
-  throw new Error("not implemented");
+  try {
+    await stat(dir);
+  } catch {
+    return [];
+  }
+
+  const entries = await readdir(dir);
+  const summaries: Summary[] = [];
+
+  for (const entry of entries) {
+    if (!entry.endsWith(".md")) continue;
+    const filePath = join(dir, entry);
+    try {
+      const data = await Bun.file(filePath).text();
+      const { mtime } = await stat(filePath);
+      const thread = parseBytes(filePath, data);
+
+      if (filter !== "all" && thread.status !== filter) continue;
+
+      const rounds =
+        thread.turns.length === 0
+          ? 0
+          : Math.max(...thread.turns.map((t) => t.round));
+
+      summaries.push({
+        path: filePath,
+        status: thread.status,
+        topic: thread.topic,
+        rounds,
+        updatedAt: mtime,
+      });
+    } catch {
+      // skip malformed files silently
+    }
+  }
+
+  return summaries.sort(
+    (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
+  );
 }
