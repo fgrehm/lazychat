@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## v0.0.3 - Unreleased
+
+### Added
+
+- TypeScript + Bun rewrite of the entire project. The package is now published to npm as `lazychat` and installs a `lazychat` CLI binary.
+- `lazychat new <slug> [--context -]` — creates a thread file at `.lazyai/YYYY-MM-DDTHHMM-<slug>.md` and prints the path.
+- `lazychat reply <file> --as <agent|human> [--model <id>] [--stdin | --body <str>]` — appends a turn with proper round numbering and model attribution.
+- `lazychat converge <file> [--stdin | --body <str>]` — appends an `## Outcome` section and flips `status` to `converged`.
+- `lazychat list [--status open|converged|all] [--json]` — lists threads sorted by mtime, with optional JSON output.
+- `lazychat show <file> [--round N | --last | --since N]` — prints thread content or a filtered subset of turns.
+- `lazychat status <file> [--json]` — prints frontmatter, round count, and last-updated timestamp.
+- `lazychat onboard` — prints the protocol reference and up to 10 active threads; intended as a session-start command for agents.
+- Per-command help via `lazychat <command> --help` (powered by Commander).
+- `SKILL-CLI.md` — companion skill for agents that have the CLI installed. Uses shell commands and heredocs instead of raw file edits; significantly shorter than `SKILL.md`.
+- `examples/2026-04-23T1042-ts-port-open-questions.md` — converged thread from the TS port design session.
+
+### Changed
+
+- README now documents both install paths: CLI + `SKILL-CLI.md` for environments with the binary, and `SKILL.md` only for environments without.
+- `bin` field points to `src/cli/index.ts` (Bun shebang) rather than a compiled binary, so the package works without a platform-specific build step.
+
 ## v0.0.2 - 2026-04-22
 
 ### Added
