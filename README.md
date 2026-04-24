@@ -47,13 +47,12 @@ chmod +x ~/.local/bin/lazychat
 
 The binary is self-contained (the Bun runtime is bundled) — no other dependencies.
 
-Then install the CLI skill for your agent:
+Then install the CLI skill for your agent. The skill is bundled with the binary, so just dump it:
 
 ```bash
 # Claude Code
 mkdir -p .claude/skills/lazychat
-wget https://github.com/fgrehm/lazychat/raw/refs/tags/v0.0.3/SKILL-CLI.md \
-  -O .claude/skills/lazychat/SKILL.md
+lazychat skill > .claude/skills/lazychat/SKILL.md
 ```
 
 The CLI-backed skill is shorter and simpler: the agent shells out instead of editing raw markdown, and `lazychat onboard` gives it the full protocol reference at session start.
@@ -77,9 +76,14 @@ lazychat new <topic-slug> [--context -]
 Create a new thread. Prints the file path. `--context -` reads one paragraph of context from stdin.
 
 ```
-lazychat reply <file> --as <agent|human> [--model <id>] [--stdin | --body <str>]
+lazychat reply <file> --as <agent|human> [--model <id>] [--stdin | --body <str> | --editor]
 ```
-Append a turn. `--as` is required. Exactly one of `--stdin` or `--body` must be given. `--model` is for agent turns.
+Append a turn. `--as` is required. Exactly one body source (`--stdin`, `--body`, or `--editor`). `--model` is for agent turns. `--editor` is human-only and opens `$EDITOR` with the last turn pre-quoted; it is also the default when `--as human` is given with no body source. Empty or unchanged buffer aborts without appending.
+
+```
+lazychat open <file>
+```
+Open a thread file in `$EDITOR` for reading or manual editing.
 
 ```
 lazychat converge <file> [--stdin | --body <str>]
@@ -105,6 +109,11 @@ Print frontmatter, round count, and last-updated timestamp.
 lazychat onboard
 ```
 Print the protocol reference and active threads. Run this at the start of an agent session.
+
+```
+lazychat skill
+```
+Print the bundled `SKILL-CLI.md` to stdout. Useful for installing the skill into an agent's skills directory without a download step.
 
 ## Related work
 

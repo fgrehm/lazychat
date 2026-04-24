@@ -1,6 +1,10 @@
 #!/usr/bin/env bun
 
 import { Command, CommanderError, type OptionValues } from "commander";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import SKILL_CLI from "../../SKILL-CLI.md" with { type: "text" };
 import type { ListFilter } from "../thread/index.ts";
 import {
   appendTurn,
@@ -55,6 +59,59 @@ Protocol rules:
 
 async function readStdin(): Promise<string> {
   return (await Bun.stdin.text()).trimEnd();
+}
+
+const EDITOR_INSTRUCTIONS = `<!-- lazychat: write your reply below. Save empty or unchanged to abort. Lines quoted with '> ' are from the last turn. -->`;
+
+async function spawnEditor(path: string): Promise<number> {
+  const editor = process.env["EDITOR"] || "vi";
+  const proc = Bun.spawn(["sh", "-c", `exec ${editor} "$@"`, "sh", path], {
+    stdin: "inherit",
+    stdout: "inherit",
+    stderr: "inherit",
+  });
+  return await proc.exited;
+}
+
+function stripInstructions(content: string): string {
+  if (content.startsWith(EDITOR_INSTRUCTIONS)) {
+    return content.slice(EDITOR_INSTRUCTIONS.length).replace(/^\s*\n+/, "");
+  }
+  return content;
+}
+
+async function composeReplyInEditor(file: string): Promise<string | null> {
+  const thread = await parse(file);
+  const lastTurn = thread.turns.at(-1);
+  const quoted = lastTurn
+    ? lastTurn.body
+        .split("\n")
+        .map((l) => (l === "" ? ">" : `> ${l}`))
+        .join("\n")
+    : "";
+  const template = quoted
+    ? `${EDITOR_INSTRUCTIONS}\n\n${quoted}\n\n`
+    : `${EDITOR_INSTRUCTIONS}\n\n`;
+
+  const dir = await mkdtemp(join(tmpdir(), "lazychat-reply-"));
+  const tmpPath = join(dir, "REPLY.md");
+  try {
+    await Bun.write(tmpPath, template);
+    const code = await spawnEditor(tmpPath);
+    if (code !== 0) {
+      process.stderr.write(
+        `editor exited with code ${code}; nothing appended\n`,
+      );
+      return null;
+    }
+    const raw = await Bun.file(tmpPath).text();
+    const body = stripInstructions(raw).trimEnd();
+    const templateBody = stripInstructions(template).trimEnd();
+    if (body === "" || body === templateBody) return null;
+    return body;
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 }
 
 function padTable(rows: string[][]): string {
@@ -115,10 +172,53 @@ async function cmdReply(file: string, opts: OptionValues): Promise<void> {
     process.stderr.write("error: --as <agent|human> is required\n");
     process.exit(2);
   }
-  const body = await resolveBody(opts);
+
+  const useEditor = opts["editor"] as boolean | undefined;
+  const useStdin = opts["stdin"] as boolean | undefined;
+  const bodyOpt = opts["body"] as string | undefined;
+
+  if (useEditor && role === "agent") {
+    process.stderr.write("error: --editor is only valid for --as human\n");
+    process.exit(2);
+  }
+
+  const sources = [useEditor, useStdin, bodyOpt !== undefined].filter(
+    Boolean,
+  ).length;
+  if (sources > 1) {
+    process.stderr.write(
+      "error: --editor, --stdin, and --body are mutually exclusive\n",
+    );
+    process.exit(2);
+  }
+
+  // Default to editor for human turns when no source is given.
+  const shouldEdit = useEditor || (sources === 0 && role === "human");
+
+  let body: string;
+  if (shouldEdit) {
+    const result = await composeReplyInEditor(file);
+    if (result === null) {
+      process.stderr.write("no changes; nothing appended\n");
+      return;
+    }
+    body = result;
+  } else {
+    body = await resolveBody(opts);
+  }
+
   const model = (opts["model"] as string | undefined) ?? "";
   const round = await appendTurn(file, role, model, body);
   process.stdout.write(`appended round ${round} (${role}) to ${file}\n`);
+}
+
+async function cmdOpen(file: string): Promise<void> {
+  if (!(await Bun.file(file).exists())) {
+    process.stderr.write(`error: file not found: ${file}\n`);
+    process.exit(1);
+  }
+  const code = await spawnEditor(file);
+  if (code !== 0) process.exit(code);
 }
 
 async function cmdConverge(file: string, opts: OptionValues): Promise<void> {
@@ -232,6 +332,10 @@ async function cmdStatus(file: string, opts: OptionValues): Promise<void> {
   );
 }
 
+async function cmdSkill(): Promise<void> {
+  process.stdout.write(SKILL_CLI);
+}
+
 async function cmdOnboard(): Promise<void> {
   const summaries = await listThreads(LAZYAI_DIR, "open");
   const active = summaries.slice(0, 10);
@@ -271,7 +375,16 @@ program
   .option("--model <id>", "Model ID (agent turns only)")
   .option("--stdin", "Read body from stdin")
   .option("--body <str>", "Turn body")
+  .option(
+    "--editor",
+    "Compose reply in $EDITOR with last turn pre-quoted (human only; default when --as human has no body source)",
+  )
   .action(cmdReply);
+
+program
+  .command("open <file>")
+  .description("Open the thread file in $EDITOR.")
+  .action(cmdOpen);
 
 program
   .command("converge <file>")
@@ -308,6 +421,11 @@ program
   .command("onboard")
   .description("Print protocol reference and active threads.")
   .action(cmdOnboard);
+
+program
+  .command("skill")
+  .description("Print the bundled SKILL-CLI.md content.")
+  .action(cmdSkill);
 
 program.exitOverride();
 
