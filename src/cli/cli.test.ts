@@ -126,6 +126,17 @@ describe("lazychat new", () => {
       await rm(dir, { recursive: true });
     }
   });
+
+  test("rejects topics that slugify to empty", async () => {
+    const dir = await tempDir();
+    try {
+      const { stderr, exitCode } = await run(["new", "!!!"], { cwd: dir });
+      expect(exitCode).toBe(2);
+      expect(stderr).toContain("empty slug");
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
 });
 
 // ── reply ─────────────────────────────────────────────────────────────────────
@@ -718,7 +729,7 @@ describe("lazychat show", () => {
         "2026-01-01T0000-t.md",
         THREAD_WITH_TURNS,
       );
-      for (const bad of ["foo", "1.5", "0", "-3"]) {
+      for (const bad of ["foo", "1.5", "1.0", "0", "-3", "1e2", "0x10", "01"]) {
         const { stderr, exitCode } = await run(["show", path, "--round", bad], {
           cwd: dir,
         });
