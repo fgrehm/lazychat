@@ -32,7 +32,11 @@ The key words MUST, MUST NOT, SHOULD, and MAY in this document are to be interpr
    EOF
    ```
 
-4. **Stop and tell the user in chat** that the file is ready at `$FILE`. You MUST NOT keep writing past the current round.
+4. **Stop and tell the user in chat** that the file is ready, and include the exact command they can copy-paste to reply (substitute the real path for `$FILE`):
+   ```bash
+   lazychat reply $FILE --as human
+   ```
+   This opens their `$EDITOR` with your turn pre-quoted, so they can write inline. You MUST NOT keep writing past the current round.
 
 5. **Wait.** The user may reply in minutes, hours, or days. Do not nudge.
 
