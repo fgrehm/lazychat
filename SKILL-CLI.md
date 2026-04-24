@@ -17,8 +17,11 @@ The key words MUST, MUST NOT, SHOULD, and MAY in this document are to be interpr
 
 2. **Create the thread** and capture the path:
    ```bash
-   FILE=$(echo "We are deciding X so that Y. Target artifact: Z." \
-     | lazychat new my-topic --context -)
+   FILE=$(lazychat new my-topic --context - << 'EOF'
+   We are deciding X so that Y. The core question is whether to A or B.
+   Target artifact: the updated widget in src/widget.ts.
+   EOF
+   )
    ```
 
 3. **Write your first turn:**
