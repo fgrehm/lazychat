@@ -4,7 +4,7 @@
 
 ### Added
 
-- TypeScript + Bun rewrite of the entire project. The package is now published to npm as `lazychat` and installs a `lazychat` CLI binary.
+- TypeScript + Bun rewrite of the entire project. Distribution is cross-compiled, self-contained `lazychat` binaries (Linux/Darwin × x64/arm64) published to GitHub Releases; an npm package is intentionally not published in this release.
 - `lazychat new <slug> [--context -]` — creates a thread file at `.lazyai/YYYY-MM-DDTHHMM-<slug>.md` and prints the path.
 - `lazychat reply <file> --as <agent|human> [--model <id>] [--stdin | --body <str> | --editor]` — appends a turn with proper round numbering and model attribution. `--editor` opens `$EDITOR` with the last turn pre-quoted; defaults to on for human turns with no body source. Empty or unchanged buffer aborts.
 - `lazychat open <file>` — opens a thread file in `$EDITOR` for reading or manual editing.

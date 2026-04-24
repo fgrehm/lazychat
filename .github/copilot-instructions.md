@@ -4,8 +4,8 @@ lazychat is a file-based async discussion protocol: a shared markdown file in th
 
 ## Runtime and distribution
 
-- This is a **Bun** project, not a Node.js project. TypeScript sources are the entry points (`src/cli/index.ts`, `src/index.ts`) and run directly via the `#!/usr/bin/env bun` shebang.
-- Distribution is via **compiled binaries** published to GitHub Releases (`bun build --compile`), not npm. Do not suggest publishing `.js` artifacts or pointing `main`/`bin` at compiled output unless npm publishing is explicitly on the table.
+- This is a **Bun** project, not a Node.js project. TypeScript sources are the entry points (`src/cli/index.ts`, `src/index.ts`) and run directly via the `#!/usr/bin/env bun` shebang. `engines.bun` in `package.json` declares the runtime requirement.
+- Distribution is via **compiled binaries** published to GitHub Releases (`bun build --compile`), not npm. **No npm publish is planned in v0.0.x.** Do not suggest publishing `.js` artifacts, building a JS shim, or changing `main`/`exports`/`bin` away from `.ts` paths. The `.ts` entries are intentional and will stay until npm publishing is explicitly back on the table.
 - Assets bundled into the binary (e.g. `SKILL-CLI.md`) are embedded with Bun text imports: `import X from "./file.md" with { type: "text" }`.
 
 ## Protocol invariants
