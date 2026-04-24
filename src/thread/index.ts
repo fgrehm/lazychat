@@ -42,7 +42,7 @@ export type ListFilter = "open" | "converged" | "all";
 
 // Pure core
 
-function maxRound(turns: Turn[]): number {
+export function maxRound(turns: Turn[]): number {
   return turns.length === 0 ? 0 : Math.max(...turns.map((t) => t.round));
 }
 
