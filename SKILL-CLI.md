@@ -14,29 +14,39 @@ The key words MUST, MUST NOT, SHOULD, and MAY in this document are to be interpr
 ## How to operate it
 
 1. **Confirm scope and context.** Before creating the file, you MUST have: the target artifact (what we want to ship), the core question or decision, and enough context to write round 1 without guessing. The prior chat counts as context; use what the human has already told you. If something needed is missing, ask in chat before creating the file.
-2. **Create the thread.**
+
+2. **Create the thread** and capture the path:
+   ```bash
+   FILE=$(echo "We are deciding X so that Y. Target artifact: Z." \
+     | lazychat new my-topic --context -)
    ```
-   lazychat new <topic-slug> --context -
+
+3. **Write your first turn:**
+   ```bash
+   lazychat reply "$FILE" --as agent --model claude-sonnet-4-6 --stdin << 'EOF'
+   Your questions, proposals, or draft here. Freeform — number points,
+   quote options, include diffs, whatever serves clarity.
+   EOF
    ```
-   Pipe one paragraph of context (what we are figuring out, why it matters, what the target artifact is) to stdin. The command prints the file path; keep it for later steps.
-3. **Write your first turn.**
-   ```
-   lazychat reply <file> --as agent --model <your-model-id> --stdin
-   ```
-   Pipe your questions, proposals, or draft to stdin. Freeform. Number points, quote options, include diffs, whatever serves clarity.
-4. **Stop and tell the user in chat** that the file is ready at `<path>`. You MUST NOT keep writing past the current round.
+
+4. **Stop and tell the user in chat** that the file is ready at `$FILE`. You MUST NOT keep writing past the current round.
+
 5. **Wait.** The user may reply in minutes, hours, or days. Do not nudge.
-6. **Re-read the thread when resuming.**
-   ```
-   lazychat show <file>            # full file
-   lazychat show <file> --since N  # only turns after round N
+
+6. **Re-read the thread when resuming:**
+   ```bash
+   lazychat show "$FILE"             # full file on first read
+   lazychat show "$FILE" --since N   # only turns after round N for catch-up
    ```
    Do not skim. The file is the source of truth. If the next move is not clear after re-reading, ask in chat or write a short refresher round; do not guess.
+
 7. **Continue** with further `lazychat reply` calls. When the discussion has converged, close the thread:
+   ```bash
+   lazychat converge "$FILE" --stdin << 'EOF'
+   Decided: X. Rationale: Y. Next step: Z.
+   EOF
    ```
-   lazychat converge <file> --stdin
-   ```
-   Pipe a summary of the decisions to stdin. Then apply the outcome to the canonical artifact. The discussion file stays as the record.
+   Then apply the outcome to the canonical artifact. The discussion file stays as the record.
 
 ## Other useful commands
 
