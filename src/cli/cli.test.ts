@@ -5,6 +5,7 @@ import { join } from "node:path";
 
 const ROOT = join(import.meta.dir, "../..");
 const BIN = join(ROOT, "dist/lazychat-test");
+const encoder = new TextEncoder();
 
 interface RunResult {
   stdout: string;
@@ -18,10 +19,7 @@ async function run(
 ): Promise<RunResult> {
   const proc = Bun.spawn([BIN, ...args], {
     cwd: opts.cwd,
-    stdin:
-      opts.stdin !== undefined
-        ? new TextEncoder().encode(opts.stdin)
-        : "ignore",
+    stdin: opts.stdin !== undefined ? encoder.encode(opts.stdin) : "ignore",
     stdout: "pipe",
     stderr: "pipe",
   });
@@ -76,6 +74,9 @@ const OPEN_THREAD = `---\nstatus: open\n---\n\n# test-topic\n\n<!-- context -->\
 const CONVERGED_THREAD =
   `---\nstatus: converged\n---\n\n# converged-topic\n\n<!-- context -->\n\n---\n\n` +
   `## Round 1 (human)\n\nhello\n\n---\n\n## Outcome\n\ndone\n`;
+const THREAD_WITH_TURNS =
+  `---\nstatus: open\n---\n\n# test\n\n<!-- ctx -->\n\n---\n\n` +
+  `## Round 1 (human)\n\nhello\n\n---\n\n## Round 2 (agent) — @claude-opus-4-5\n\nworld\n`;
 
 // ── new ──────────────────────────────────────────────────────────────────────
 
@@ -421,10 +422,6 @@ describe("lazychat list", () => {
 // ── show ──────────────────────────────────────────────────────────────────────
 
 describe("lazychat show", () => {
-  const THREAD_WITH_TURNS =
-    `---\nstatus: open\n---\n\n# test\n\n<!-- ctx -->\n\n---\n\n` +
-    `## Round 1 (human)\n\nhello\n\n---\n\n## Round 2 (agent) — @claude-opus-4-5\n\nworld\n`;
-
   test("no flag prints whole file", async () => {
     const dir = await tempDir();
     try {

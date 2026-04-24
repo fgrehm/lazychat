@@ -61,7 +61,7 @@ function padTable(rows: string[][]): string {
   if (rows.length === 0) return "";
   const cols = rows[0].length;
   const widths = Array.from({ length: cols - 1 }, (_, i) =>
-    Math.max(...rows.map((r) => r[i]?.length ?? 0)),
+    rows.reduce((max, r) => Math.max(max, r[i]?.length ?? 0), 0),
   );
   return rows
     .map((row) =>
@@ -95,40 +95,34 @@ async function cmdNew(rawSlug: string, opts: OptionValues): Promise<void> {
   process.stdout.write(path + "\n");
 }
 
+async function resolveBody(opts: OptionValues): Promise<string> {
+  const useStdin = opts["stdin"] as boolean | undefined;
+  const bodyOpt = opts["body"] as string | undefined;
+  if (useStdin && bodyOpt !== undefined) {
+    process.stderr.write("error: --stdin and --body are mutually exclusive\n");
+    process.exit(2);
+  }
+  if (!useStdin && bodyOpt === undefined) {
+    process.stderr.write("error: --stdin or --body must be provided\n");
+    process.exit(2);
+  }
+  return useStdin ? await readStdin() : bodyOpt!;
+}
+
 async function cmdReply(file: string, opts: OptionValues): Promise<void> {
   const role = opts["as"] as string | undefined;
   if (!role || (role !== "agent" && role !== "human")) {
     process.stderr.write("error: --as <agent|human> is required\n");
     process.exit(2);
   }
-  const useStdin = opts["stdin"] as boolean | undefined;
-  const bodyOpt = opts["body"] as string | undefined;
-  if (useStdin && bodyOpt !== undefined) {
-    process.stderr.write("error: --stdin and --body are mutually exclusive\n");
-    process.exit(2);
-  }
-  if (!useStdin && bodyOpt === undefined) {
-    process.stderr.write("error: --stdin or --body must be provided\n");
-    process.exit(2);
-  }
-  const body = useStdin ? await readStdin() : bodyOpt!;
+  const body = await resolveBody(opts);
   const model = (opts["model"] as string | undefined) ?? "";
   const round = await appendTurn(file, role, model, body);
   process.stdout.write(`appended round ${round} (${role}) to ${file}\n`);
 }
 
 async function cmdConverge(file: string, opts: OptionValues): Promise<void> {
-  const useStdin = opts["stdin"] as boolean | undefined;
-  const bodyOpt = opts["body"] as string | undefined;
-  if (useStdin && bodyOpt !== undefined) {
-    process.stderr.write("error: --stdin and --body are mutually exclusive\n");
-    process.exit(2);
-  }
-  if (!useStdin && bodyOpt === undefined) {
-    process.stderr.write("error: --stdin or --body must be provided\n");
-    process.exit(2);
-  }
-  const body = useStdin ? await readStdin() : bodyOpt!;
+  const body = await resolveBody(opts);
   await converge(file, body);
 }
 
