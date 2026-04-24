@@ -70,9 +70,11 @@ export function nextRound(turns: Turn[], role: Role): number {
 const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
 const STATUS_RE = /^status:\s*(open|converged)\s*(\r?\n|$)/m;
 const H1_RE = /^# (.+)$/m;
-// em-dash is U+2014; tolerates annotations like (human, via chat)
+// Attribution separator is em-dash (U+2014) on write, but parse accepts
+// en-dash (U+2013) or plain hyphen too so hand-typed turns don't silently
+// drop out and collide round numbers. Tolerates annotations like (human, via chat).
 const TURN_HEADER_RE =
-  /^##\s+Round\s+(\d+)\s+\((agent|human)(?:,[^)]*)?\)(?:\s*—\s*@(\S+))?\s*$/;
+  /^##\s+Round\s+(\d+)\s+\((agent|human)(?:,[^)]*)?\)(?:\s*[—–-]\s*@(\S+))?\s*$/;
 const OUTCOME_RE = /^##\s+Outcome\s*$/m;
 
 export function parseBytes(path: string, data: string): Thread {

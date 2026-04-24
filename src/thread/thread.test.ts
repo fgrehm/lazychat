@@ -195,6 +195,26 @@ describe("parseBytes", () => {
     expect(th.turns[0].model).toBe("claude-opus-4-7");
   });
 
+  test("accepts hyphen or en-dash attribution (hand-typed turns)", () => {
+    const body = [
+      "---",
+      "",
+      "## Round 1 (human) - @fgrehm",
+      "",
+      "hyphen body",
+      "",
+      "---",
+      "",
+      "## Round 2 (human) – @fgrehm",
+      "",
+      "en-dash body",
+    ].join("\n");
+    const th = parseBytes("f.md", threadFile(body));
+    expect(th.turns).toHaveLength(2);
+    expect(th.turns[0].model).toBe("fgrehm");
+    expect(th.turns[1].model).toBe("fgrehm");
+  });
+
   test("human turns have empty model", () => {
     const body = `---\n\n${turnBlock(1, "human")}\n`;
     const th = parseBytes("f.md", threadFile(body));
