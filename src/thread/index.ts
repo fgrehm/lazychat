@@ -167,7 +167,10 @@ export async function newThread(
   context: string,
 ): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
-  const content = `---\nstatus: open\n---\n\n# ${topic}\n\n<!-- ${context} -->\n`;
+  const comment = context.includes("\n")
+    ? `<!--\n${context}\n-->`
+    : `<!-- ${context} -->`;
+  const content = `---\nstatus: open\n---\n\n# ${topic}\n\n${comment}\n`;
   try {
     await writeFile(path, content, { encoding: "utf8", flag: "wx" });
   } catch (e) {
