@@ -39,7 +39,7 @@ Commands:
       Print thread content. No flag prints the whole file.
       --round N   print all turns at round N.
       --last      print the last turn.
-      --since N   print turns where round > N.
+      --since N   print turns at round N and later (inclusive).
 
   status <file> [--json]
       Print frontmatter, round count, and last-updated timestamp.
@@ -196,7 +196,7 @@ async function cmdShow(file: string, opts: OptionValues): Promise<void> {
     selected = last ? [last] : [];
   } else {
     const n = parseInt(sinceOpt!, 10);
-    selected = thread.turns.filter((t) => t.round > n);
+    selected = thread.turns.filter((t) => t.round >= n);
   }
 
   if (selected.length > 0) {
@@ -292,7 +292,7 @@ program
   .description("Print thread content. No flag prints the whole file.")
   .option("--round <n>", "Print turns at round N")
   .option("--last", "Print the last turn")
-  .option("--since <n>", "Print turns where round > N")
+  .option("--since <n>", "Print turns at round N and later (inclusive)")
   .action(cmdShow);
 
 program
