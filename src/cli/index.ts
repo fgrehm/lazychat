@@ -39,7 +39,7 @@ Commands:
       Print thread content. No flag prints the whole file.
       --round N   print all turns at round N.
       --last      print the last turn.
-      --since N   print turns at round N and later (inclusive).
+      --since N   print turns at round N and later. N = the round you last wrote.
 
   status <file> [--json]
       Print frontmatter, round count, and last-updated timestamp.
@@ -292,7 +292,10 @@ program
   .description("Print thread content. No flag prints the whole file.")
   .option("--round <n>", "Print turns at round N")
   .option("--last", "Print the last turn")
-  .option("--since <n>", "Print turns at round N and later (inclusive)")
+  .option(
+    "--since <n>",
+    "Print turns at round N and later — pass the round you last wrote for catch-up",
+  )
   .action(cmdShow);
 
 program

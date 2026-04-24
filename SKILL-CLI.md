@@ -39,7 +39,7 @@ The key words MUST, MUST NOT, SHOULD, and MAY in this document are to be interpr
 6. **Re-read the thread when resuming:**
    ```bash
    lazychat show "$FILE"             # full file on first read
-   lazychat show "$FILE" --since N   # turns at round N onward (inclusive) for catch-up
+   lazychat show "$FILE" --since N   # turns at round N onward. N = the round you last wrote.
    ```
    Do not skim. The file is the source of truth. If the next move is not clear after re-reading, ask in chat or write a short refresher round; do not guess.
 

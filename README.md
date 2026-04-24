@@ -36,12 +36,16 @@ There are two ways to use lazychat: with the CLI, or with just the skill file.
 
 ### With the CLI (recommended)
 
-Install the `lazychat` binary:
+Download the binary for your platform from the [latest release](https://github.com/fgrehm/lazychat/releases/latest) and put it on your `PATH`:
 
 ```bash
-# via npm / bun / pnpm
-npm install -g lazychat
+# Linux x64 (adapt for darwin-arm64, etc.)
+curl -L https://github.com/fgrehm/lazychat/releases/download/v0.0.3/lazychat-linux-x64 \
+  -o ~/.local/bin/lazychat
+chmod +x ~/.local/bin/lazychat
 ```
+
+The binary is self-contained (the Bun runtime is bundled) — no other dependencies.
 
 Then install the CLI skill for your agent:
 
