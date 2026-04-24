@@ -5,7 +5,6 @@ import {
   rename,
   stat,
   unlink,
-  utimes,
   writeFile,
 } from "node:fs/promises";
 import { dirname, join } from "node:path";
@@ -41,9 +40,11 @@ export interface Summary {
 
 export type ListFilter = "open" | "converged" | "all";
 
-// ---------------------------------------------------------------------------
-// Pure core — no filesystem I/O
-// ---------------------------------------------------------------------------
+// Pure core
+
+function maxRound(turns: Turn[]): number {
+  return turns.length === 0 ? 0 : Math.max(...turns.map((t) => t.round));
+}
 
 export function slugifyTopic(s: string): string {
   return s
@@ -60,10 +61,10 @@ export function timestampedPath(dir: string, slug: string, now: Date): string {
 
 export function nextRound(turns: Turn[], role: Role): number {
   if (turns.length === 0) return 1;
-  const maxN = Math.max(...turns.map((t) => t.round));
-  if (role === "agent") return maxN + 1;
-  const humanAtMax = turns.some((t) => t.round === maxN && t.role === "human");
-  return humanAtMax ? maxN + 1 : maxN;
+  const max = maxRound(turns);
+  if (role === "agent") return max + 1;
+  const humanAtMax = turns.some((t) => t.round === max && t.role === "human");
+  return humanAtMax ? max + 1 : max;
 }
 
 const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
@@ -90,7 +91,6 @@ export function parseBytes(path: string, data: string): Thread {
   const topic = h1Match ? h1Match[1].trim() : "";
 
   const hasOutcome = OUTCOME_RE.test(text);
-
   const turns: Turn[] = [];
   const lines = text.split("\n");
 
@@ -114,10 +114,13 @@ export function parseBytes(path: string, data: string): Thread {
     }
 
     const bodyLines = lines.slice(bodyStart, bodyEnd);
-    const body = bodyLines.join("\n").trim();
-    const raw = [headerLine, ...bodyLines].join("\n");
-
-    turns.push({ round, role, model, body, raw });
+    turns.push({
+      round,
+      role,
+      model,
+      body: bodyLines.join("\n").trim(),
+      raw: [headerLine, ...bodyLines].join("\n"),
+    });
   }
 
   return {
@@ -131,13 +134,10 @@ export function parseBytes(path: string, data: string): Thread {
   };
 }
 
-// ---------------------------------------------------------------------------
 // I/O layer
-// ---------------------------------------------------------------------------
 
 async function atomicWrite(path: string, content: string): Promise<void> {
-  const dir = dirname(path);
-  const tmp = join(dir, `.tmp-${randomBytes(6).toString("hex")}`);
+  const tmp = join(dirname(path), `.tmp-${randomBytes(6).toString("hex")}`);
   try {
     await writeFile(tmp, content, "utf8");
     await rename(tmp, path);
@@ -152,8 +152,10 @@ async function atomicWrite(path: string, content: string): Promise<void> {
 }
 
 export async function parse(path: string): Promise<Thread> {
-  const data = await Bun.file(path).text();
-  const { mtime } = await stat(path);
+  const [data, { mtime }] = await Promise.all([
+    Bun.file(path).text(),
+    stat(path),
+  ]);
   const thread = parseBytes(path, data);
   thread.updatedAt = mtime;
   return thread;
@@ -164,17 +166,16 @@ export async function newThread(
   topic: string,
   context: string,
 ): Promise<void> {
-  try {
-    await stat(path);
-    throw new Error(`${path}: file already exists`);
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
-  }
-
   await mkdir(dirname(path), { recursive: true });
-
   const content = `---\nstatus: open\n---\n\n# ${topic}\n\n<!-- ${context} -->\n`;
-  await atomicWrite(path, content);
+  try {
+    await writeFile(path, content, { encoding: "utf8", flag: "wx" });
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "EEXIST") {
+      throw new Error(`${path}: file already exists`);
+    }
+    throw e;
+  }
 }
 
 export async function appendTurn(
@@ -195,9 +196,10 @@ export async function appendTurn(
   const attr = effectiveModel ? ` — @${effectiveModel}` : "";
   const header = `## Round ${round} (${role})${attr}`;
 
-  const newContent =
-    data.trimEnd() + `\n\n---\n\n${header}\n\n${body.trimEnd()}\n`;
-  await atomicWrite(path, newContent);
+  await atomicWrite(
+    path,
+    data.trimEnd() + `\n\n---\n\n${header}\n\n${body.trimEnd()}\n`,
+  );
   return round;
 }
 
@@ -209,10 +211,9 @@ export async function converge(path: string, body: string): Promise<void> {
     throw new Error(`${path}: thread is already converged`);
   }
 
-  let newContent =
-    data.trimEnd() + `\n\n---\n\n## Outcome\n\n${body.trimEnd()}\n`;
-  newContent = newContent.replace(/^status: open\s*$/m, "status: converged");
-
+  const newContent = (
+    data.trimEnd() + `\n\n---\n\n## Outcome\n\n${body.trimEnd()}\n`
+  ).replace(/^status: open\s*$/m, "status: converged");
   await atomicWrite(path, newContent);
 }
 
@@ -220,43 +221,40 @@ export async function listThreads(
   dir: string,
   filter: ListFilter = "open",
 ): Promise<Summary[]> {
+  let entries: string[];
   try {
-    await stat(dir);
-  } catch {
-    return [];
+    entries = await readdir(dir);
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw e;
   }
 
-  const entries = await readdir(dir);
-  const summaries: Summary[] = [];
-
-  for (const entry of entries) {
-    if (!entry.endsWith(".md")) continue;
-    const filePath = join(dir, entry);
-    try {
-      const data = await Bun.file(filePath).text();
-      const { mtime } = await stat(filePath);
-      const thread = parseBytes(filePath, data);
-
-      if (filter !== "all" && thread.status !== filter) continue;
-
-      const rounds =
-        thread.turns.length === 0
-          ? 0
-          : Math.max(...thread.turns.map((t) => t.round));
-
-      summaries.push({
-        path: filePath,
-        status: thread.status,
-        topic: thread.topic,
-        rounds,
-        updatedAt: mtime,
-      });
-    } catch {
-      // skip malformed files silently
-    }
-  }
-
-  return summaries.sort(
-    (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
+  const results = await Promise.all(
+    entries
+      .filter((e) => e.endsWith(".md"))
+      .map(async (entry): Promise<Summary | null> => {
+        const filePath = join(dir, entry);
+        try {
+          const [data, { mtime }] = await Promise.all([
+            Bun.file(filePath).text(),
+            stat(filePath),
+          ]);
+          const thread = parseBytes(filePath, data);
+          if (filter !== "all" && thread.status !== filter) return null;
+          return {
+            path: filePath,
+            status: thread.status,
+            topic: thread.topic,
+            rounds: maxRound(thread.turns),
+            updatedAt: mtime,
+          };
+        } catch {
+          return null;
+        }
+      }),
   );
+
+  return results
+    .filter((s): s is Summary => s !== null)
+    .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
 }
