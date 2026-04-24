@@ -15,6 +15,7 @@
   "files": [
     "src",
     "SKILL.md",
+    "SKILL-CLI.md",
     "README.md",
     "LICENSE"
   ],

@@ -15,15 +15,15 @@ Chat is lossy for multi-decision work:
 - **No persistent artifact.** Chat transcripts are hard to revisit. A file can be re-opened, git-tracked, and referenced later.
 - **Proposals get paraphrased on reply.** The agent cannot verify its own proposal landed intact.
 
-Chat is also harder on people who can't keep its pace. Rapid-fire messaging expects real-time reading, fast typing, and uninterrupted attention; a markdown thread does not. You can walk away, read with a screen reader, take hours to compose a reply, and the agent waits without nagging. That matters for your own focus, and it genuinely helps folks with cognitive, motor, visual, or energy-related disabilities who are not well-served by real-time tooling.
+Chat is also harder on people who can't keep its pace. Rapid-fire messaging expects real-time reading, fast typing, and uninterrupted attention; a markdown thread does not. You can walk away, read with a screen reader, take hours to compose a reply, and the agent waits without nagging.
 
-Check out [this blog post](https://fabiorehm.com/blog/2026/04/17/lazychat/) to know more about how this came to be.
+Check out [this blog post](https://fabiorehm.com/blog/2026/04/17/lazychat/) for more background.
 
 ## How it works
 
-1. Agent creates a file at `.lazyai/YYYY-MM-DDTHHMM-topic.md` from the template embedded into the skill itself.
+1. Agent creates a file at `.lazyai/YYYY-MM-DDTHHMM-topic.md`.
 2. Agent writes questions, proposals, or drafts in the file, then stops and tells you.
-3. You reply in the file, freeform. No required structure. No reply vocabulary.
+3. You reply in the file, freeform. No required structure.
 4. Agent reads the file back in full and continues.
 
 The protocol is tooling-agnostic. Any agent that reads and writes files, and any human with a text editor, can run it.
@@ -32,15 +32,75 @@ See [`examples/`](examples/) for completed threads from lazychat's own design se
 
 ## Installation
 
-`SKILL.md` content is agent-agnostic. The frontmatter follows Claude Code's convention and the body is just the protocol. You can adapt it to your needs and adjust the template as needed too.
+There are two ways to use lazychat: with the CLI, or with just the skill file.
+
+### With the CLI (recommended)
+
+Install the `lazychat` binary:
 
 ```bash
-# Pick your coding agent flavour
-SKILL='.claude/skills/lazychat'
-mkdir -p "${SKILL}"
-wget https://github.com/fgrehm/lazychat/raw/refs/tags/v0.0.2/SKILL.md \
-  -O "${SKILL}/SKILL.md"
+# via npm / bun / pnpm
+npm install -g lazychat
 ```
+
+Then install the CLI skill for your agent:
+
+```bash
+# Claude Code
+mkdir -p .claude/skills/lazychat
+wget https://github.com/fgrehm/lazychat/raw/refs/tags/v0.0.3/SKILL-CLI.md \
+  -O .claude/skills/lazychat/SKILL.md
+```
+
+The CLI-backed skill is shorter and simpler: the agent shells out instead of editing raw markdown, and `lazychat onboard` gives it the full protocol reference at session start.
+
+### Skill only (no CLI required)
+
+If you prefer not to install a binary, the file-based skill works without it. The agent reads and writes the thread files directly using the format described in `SKILL.md`.
+
+```bash
+# Claude Code
+mkdir -p .claude/skills/lazychat
+wget https://github.com/fgrehm/lazychat/raw/refs/tags/v0.0.3/SKILL.md \
+  -O .claude/skills/lazychat/SKILL.md
+```
+
+## CLI reference
+
+```
+lazychat new <topic-slug> [--context -]
+```
+Create a new thread. Prints the file path. `--context -` reads one paragraph of context from stdin.
+
+```
+lazychat reply <file> --as <agent|human> [--model <id>] [--stdin | --body <str>]
+```
+Append a turn. `--as` is required. Exactly one of `--stdin` or `--body` must be given. `--model` is for agent turns.
+
+```
+lazychat converge <file> [--stdin | --body <str>]
+```
+Append an Outcome section and mark the thread converged.
+
+```
+lazychat show <file> [--round N | --last | --since N]
+```
+Print thread content. No flag prints the whole file. `--since N` prints only turns where round > N (useful for catch-up reads).
+
+```
+lazychat list [--status open|converged|all] [--json]
+```
+List threads in `.lazyai/`, most recent first. Defaults to open threads.
+
+```
+lazychat status <file> [--json]
+```
+Print frontmatter, round count, and last-updated timestamp.
+
+```
+lazychat onboard
+```
+Print the protocol reference and active threads. Run this at the start of an agent session.
 
 ## Related work
 
@@ -50,13 +110,13 @@ lazychat sits next to a handful of projects that use shared markdown files as ag
 - [llm-md](https://llm.md/) — a DSL for LLM-to-LLM conversations in markdown. Structured agent turns with explicit syntax.
 - Basic Memory — bidirectional LLM-markdown knowledge persistence via MCP. Knowledge-graph shape, not discussion shape.
 
-lazychat is narrower: human plus agent, freeform replies, explicit stop-and-wait, file-as-record. Email thread between a person and an agent, not a shared state layer between agents.
+lazychat is narrower: human plus agent, freeform replies, explicit stop-and-wait, file-as-record.
 
 ## Status
 
-Distilled from real use with pi coding agent and Claude Code. Deliberately minimal. Earlier drafts included reply vocabulary, round types, and a multi-state lifecycle. Those were cut.
+Distilled from real use with pi coding agent and Claude Code. Deliberately minimal.
 
-v0.0.2 added back the pieces that kept earning their keep (numbered turn headers, `open` / `converged` status). More may land later, but only when the pain is concrete.
+v0.0.3 added a TypeScript + Bun rewrite with a full CLI (`lazychat`) and a companion skill (`SKILL-CLI.md`) for agents that have it installed. The file-based `SKILL.md` remains for environments where the CLI is not available.
 
 ## License
 
