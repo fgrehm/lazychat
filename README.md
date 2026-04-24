@@ -40,8 +40,8 @@ Download the binary for your platform from the [latest release](https://github.c
 
 ```bash
 # Linux x64 (adapt for darwin-arm64, etc.)
-curl -L https://github.com/fgrehm/lazychat/releases/download/v0.0.3/lazychat-linux-x64 \
-  -o ~/.local/bin/lazychat
+wget https://github.com/fgrehm/lazychat/releases/download/v0.0.3/lazychat-linux-x64 \
+  -O ~/.local/bin/lazychat
 chmod +x ~/.local/bin/lazychat
 ```
 
