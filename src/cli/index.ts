@@ -10,6 +10,7 @@ import {
   appendTurn,
   converge,
   listThreads,
+  maxRound,
   newThread,
   parse,
   slugifyTopic,
@@ -286,16 +287,27 @@ async function cmdShow(file: string, opts: OptionValues): Promise<void> {
     return;
   }
 
+  const parsePositiveInt = (raw: string, flag: string): number => {
+    const n = Number(raw);
+    if (!Number.isInteger(n) || n < 1) {
+      process.stderr.write(
+        `error: ${flag} requires a positive integer, got ${JSON.stringify(raw)}\n`,
+      );
+      process.exit(2);
+    }
+    return n;
+  };
+
   const thread = await parse(file);
   let selected;
   if (roundOpt !== undefined) {
-    const n = parseInt(roundOpt, 10);
+    const n = parsePositiveInt(roundOpt, "--round");
     selected = thread.turns.filter((t) => t.round === n);
   } else if (lastOpt) {
     const last = thread.turns.at(-1);
     selected = last ? [last] : [];
   } else {
-    const n = parseInt(sinceOpt!, 10);
+    const n = parsePositiveInt(sinceOpt!, "--since");
     selected = thread.turns.filter((t) => t.round >= n);
   }
 
@@ -308,13 +320,14 @@ async function cmdShow(file: string, opts: OptionValues): Promise<void> {
 
 async function cmdStatus(file: string, opts: OptionValues): Promise<void> {
   const thread = await parse(file);
+  const rounds = maxRound(thread.turns);
   if (opts["json"]) {
     process.stdout.write(
       JSON.stringify(
         {
           status: thread.status,
           topic: thread.topic,
-          rounds: thread.turns.length,
+          rounds,
           updatedAt: thread.updatedAt.toISOString(),
         },
         null,
@@ -326,7 +339,7 @@ async function cmdStatus(file: string, opts: OptionValues): Promise<void> {
   process.stdout.write(
     [
       thread.frontmatterRaw.trim(),
-      `rounds: ${thread.turns.length}`,
+      `rounds: ${rounds}`,
       `updated: ${fmtDate(thread.updatedAt, true)}`,
     ].join("\n") + "\n",
   );

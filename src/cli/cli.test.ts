@@ -700,11 +700,49 @@ describe("lazychat show", () => {
         THREAD_WITH_TURNS,
       );
       const { stderr, exitCode } = await run(
-        ["show", path, "--last", "--since", "0"],
+        ["show", path, "--last", "--since", "1"],
         { cwd: dir },
       );
       expect(exitCode).toBe(2);
       expect(stderr).toContain("mutually exclusive");
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test("errors with exit 2 when --round is not a positive integer", async () => {
+    const dir = await tempDir();
+    try {
+      const path = await writeThread(
+        dir,
+        "2026-01-01T0000-t.md",
+        THREAD_WITH_TURNS,
+      );
+      for (const bad of ["foo", "1.5", "0", "-3"]) {
+        const { stderr, exitCode } = await run(["show", path, "--round", bad], {
+          cwd: dir,
+        });
+        expect(exitCode).toBe(2);
+        expect(stderr).toContain("--round requires a positive integer");
+      }
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test("errors with exit 2 when --since is not a positive integer", async () => {
+    const dir = await tempDir();
+    try {
+      const path = await writeThread(
+        dir,
+        "2026-01-01T0000-t.md",
+        THREAD_WITH_TURNS,
+      );
+      const { stderr, exitCode } = await run(["show", path, "--since", "bar"], {
+        cwd: dir,
+      });
+      expect(exitCode).toBe(2);
+      expect(stderr).toContain("--since requires a positive integer");
     } finally {
       await rm(dir, { recursive: true });
     }
@@ -724,6 +762,25 @@ describe("lazychat status", () => {
       expect(stdout).toContain("status: open");
       expect(stdout).toContain("rounds: 1");
       expect(stdout).toMatch(/updated: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test("reports max round number, not parsed turn count", async () => {
+    const dir = await tempDir();
+    try {
+      // Two Round 2 turns (gap at Round 1) — turns.length=2, max round=2.
+      const thread =
+        `---\nstatus: open\n---\n\n# gap-test\n\n<!-- ctx -->\n\n---\n\n` +
+        `## Round 2 (agent) — @x\n\nfirst\n\n---\n\n## Round 2 (human)\n\nsecond\n`;
+      const path = await writeThread(dir, "2026-01-01T0000-t.md", thread);
+      const { stdout } = await run(["status", path], { cwd: dir });
+      expect(stdout).toContain("rounds: 2");
+      const { stdout: json } = await run(["status", path, "--json"], {
+        cwd: dir,
+      });
+      expect(JSON.parse(json).rounds).toBe(2);
     } finally {
       await rm(dir, { recursive: true });
     }
