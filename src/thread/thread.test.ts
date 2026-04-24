@@ -267,11 +267,20 @@ describe("newThread", () => {
     expect(th.topic).toBe("my-topic");
   });
 
-  test("embeds context in the HTML comment", async () => {
+  test("embeds single-line context inline in the HTML comment", async () => {
     const path = join(dir, "thread.md");
     await newThread(path, "my-topic", "what we are figuring out");
     const data = await Bun.file(path).text();
     expect(data).toContain("<!-- what we are figuring out -->");
+  });
+
+  test("formats multiline context with delimiters on their own lines", async () => {
+    const path = join(dir, "thread.md");
+    const ctx = "Paragraph one.\nParagraph two.\n\nParagraph three.";
+    await newThread(path, "my-topic", ctx);
+    const data = await Bun.file(path).text();
+    expect(data).toContain(`<!--\n${ctx}\n-->`);
+    expect(data).not.toContain(`<!-- ${ctx}`);
   });
 
   test("auto-creates parent directory", async () => {
