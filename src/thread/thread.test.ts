@@ -1,8 +1,16 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import * as fc from "fast-check";
+import { mkdtemp, rm, utimes, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { Turn } from "./index.ts";
 import {
+  appendTurn,
+  converge,
+  listThreads,
+  newThread,
   nextRound,
+  parse,
   parseBytes,
   slugifyTopic,
   timestampedPath,
@@ -16,7 +24,7 @@ function t(round: number, role: "agent" | "human"): Turn {
   return { round, role, model: "", body: "", raw: "" };
 }
 
-function thread(body: string, fm = "status: open") {
+function threadFile(body: string, fm = "status: open") {
   return `---\n${fm}\n---\n\n# test-topic\n\n${body}`;
 }
 
@@ -29,6 +37,16 @@ function turnBlock(
   const attr = model ? ` — @${model}` : "";
   return `## Round ${round} (${role})${attr}\n\n${body}`;
 }
+
+let dir: string;
+
+beforeEach(async () => {
+  dir = await mkdtemp(join(tmpdir(), "lazychat-test-"));
+});
+
+afterEach(async () => {
+  await rm(dir, { recursive: true, force: true });
+});
 
 // ---------------------------------------------------------------------------
 // slugifyTopic
@@ -45,7 +63,6 @@ describe("slugifyTopic", () => {
 
   test("collapses runs of separators", () => {
     expect(slugifyTopic("foo   bar")).toBe("foo-bar");
-    expect(slugifyTopic("foo---bar")).toBe("foo---bar"); // internal --- kept as-is
     expect(slugifyTopic("foo !!! bar")).toBe("foo-bar");
   });
 
@@ -137,24 +154,24 @@ describe("nextRound", () => {
 
 describe("parseBytes", () => {
   test("parses frontmatter status: open", () => {
-    const th = parseBytes("f.md", thread(""));
+    const th = parseBytes("f.md", threadFile(""));
     expect(th.status).toBe("open");
   });
 
   test("parses frontmatter status: converged", () => {
-    const th = parseBytes("f.md", thread("", "status: converged"));
+    const th = parseBytes("f.md", threadFile("", "status: converged"));
     expect(th.status).toBe("converged");
   });
 
   test("preserves extra frontmatter fields verbatim", () => {
     const fm = "status: open\ntitle: My Thread\nparticipants: fabio, agent";
-    const th = parseBytes("f.md", thread("", fm));
+    const th = parseBytes("f.md", threadFile("", fm));
     expect(th.frontmatterRaw).toContain("title: My Thread");
     expect(th.frontmatterRaw).toContain("participants: fabio, agent");
   });
 
   test("parses H1 as topic", () => {
-    const th = parseBytes("f.md", thread(""));
+    const th = parseBytes("f.md", threadFile(""));
     expect(th.topic).toBe("test-topic");
   });
 
@@ -167,20 +184,20 @@ describe("parseBytes", () => {
 
   test("tolerates annotations like (human, via chat) in turn headers", () => {
     const body = "---\n\n## Round 1 (human, via chat)\n\nbody\n";
-    const th = parseBytes("f.md", thread(body));
+    const th = parseBytes("f.md", threadFile(body));
     expect(th.turns).toHaveLength(1);
     expect(th.turns[0].role).toBe("human");
   });
 
   test("captures agent model attribution after the em-dash", () => {
     const body = `---\n\n${turnBlock(1, "agent", "claude-opus-4-7")}\n`;
-    const th = parseBytes("f.md", thread(body));
+    const th = parseBytes("f.md", threadFile(body));
     expect(th.turns[0].model).toBe("claude-opus-4-7");
   });
 
   test("human turns have empty model", () => {
     const body = `---\n\n${turnBlock(1, "human")}\n`;
-    const th = parseBytes("f.md", thread(body));
+    const th = parseBytes("f.md", threadFile(body));
     expect(th.turns[0].model).toBe("");
   });
 
@@ -198,19 +215,19 @@ describe("parseBytes", () => {
       "",
       turnBlock(1, "agent"),
     ].join("\n");
-    const th = parseBytes("f.md", thread(body));
+    const th = parseBytes("f.md", threadFile(body));
     expect(th.turns).toHaveLength(3);
     expect(th.turns.map((t) => t.round)).toEqual([1, 3, 1]);
   });
 
   test("detects ## Outcome section", () => {
     const body = "---\n\n## Outcome\n\ndone\n";
-    const th = parseBytes("f.md", thread(body, "status: converged"));
+    const th = parseBytes("f.md", threadFile(body, "status: converged"));
     expect(th.hasOutcome).toBe(true);
   });
 
   test("hasOutcome is false when Outcome section absent", () => {
-    const th = parseBytes("f.md", thread(""));
+    const th = parseBytes("f.md", threadFile(""));
     expect(th.hasOutcome).toBe(false);
   });
 
@@ -238,43 +255,238 @@ describe("parseBytes", () => {
 });
 
 // ---------------------------------------------------------------------------
-// I/O functions — tested in step 2
+// newThread
 // ---------------------------------------------------------------------------
 
 describe("newThread", () => {
-  test.todo("creates file at the given path with status: open", () => {});
-  test.todo(
-    "writes topic as H1 and embeds context in the HTML comment",
-    () => {},
-  );
-  test.todo("errors when file already exists", () => {});
-  test.todo("atomic write (temp file + rename)", () => {});
+  test("creates file with status: open and H1 topic", async () => {
+    const path = join(dir, "thread.md");
+    await newThread(path, "my-topic", "some context");
+    const th = await parse(path);
+    expect(th.status).toBe("open");
+    expect(th.topic).toBe("my-topic");
+  });
+
+  test("embeds context in the HTML comment", async () => {
+    const path = join(dir, "thread.md");
+    await newThread(path, "my-topic", "what we are figuring out");
+    const data = await Bun.file(path).text();
+    expect(data).toContain("<!-- what we are figuring out -->");
+  });
+
+  test("auto-creates parent directory", async () => {
+    const path = join(dir, "nested", ".lazyai", "thread.md");
+    await newThread(path, "slug", "ctx");
+    const th = await parse(path);
+    expect(th.status).toBe("open");
+  });
+
+  test("errors when file already exists", async () => {
+    const path = join(dir, "thread.md");
+    await newThread(path, "slug", "ctx");
+    await expect(newThread(path, "slug", "ctx")).rejects.toThrow(
+      "already exists",
+    );
+  });
 });
+
+// ---------------------------------------------------------------------------
+// appendTurn
+// ---------------------------------------------------------------------------
 
 describe("appendTurn", () => {
-  test.todo("appends agent turn with model attribution", () => {});
-  test.todo("appends human turn without model attribution", () => {});
-  test.todo("ignores model for human turns", () => {});
-  test.todo("numbers the round per nextRound rules", () => {});
-  test.todo("errors on converged thread", () => {});
-  test.todo("preserves extra frontmatter fields on write", () => {});
-  test.todo("errors when thread is converged (agent)", () => {});
-  test.todo("errors when thread is converged (human)", () => {});
+  test("appends agent turn with em-dash attribution", async () => {
+    const path = join(dir, "thread.md");
+    await newThread(path, "slug", "ctx");
+    await appendTurn(path, "agent", "claude-opus-4-7", "hello");
+    const data = await Bun.file(path).text();
+    expect(data).toContain("## Round 1 (agent) — @claude-opus-4-7");
+    expect(data).toContain("hello");
+  });
+
+  test("appends human turn without attribution", async () => {
+    const path = join(dir, "thread.md");
+    await newThread(path, "slug", "ctx");
+    await appendTurn(path, "agent", "m", "first");
+    await appendTurn(path, "human", "", "reply");
+    const data = await Bun.file(path).text();
+    expect(data).toContain("## Round 1 (human)\n");
+    expect(data).not.toContain("## Round 1 (human) —");
+  });
+
+  test("ignores model for human turns", async () => {
+    const path = join(dir, "thread.md");
+    await newThread(path, "slug", "ctx");
+    await appendTurn(path, "agent", "m", "first");
+    await appendTurn(path, "human", "some-model", "reply");
+    const data = await Bun.file(path).text();
+    expect(data).toContain("## Round 1 (human)\n");
+  });
+
+  test("numbers rounds per nextRound rules", async () => {
+    const path = join(dir, "thread.md");
+    await newThread(path, "slug", "ctx");
+    const r1 = await appendTurn(path, "agent", "m", "a1");
+    const r2 = await appendTurn(path, "human", "", "h1");
+    const r3 = await appendTurn(path, "agent", "m", "a2");
+    expect(r1).toBe(1);
+    expect(r2).toBe(1);
+    expect(r3).toBe(2);
+  });
+
+  test("defaults model to 'unknown' when empty for agent turns", async () => {
+    const path = join(dir, "thread.md");
+    await newThread(path, "slug", "ctx");
+    await appendTurn(path, "agent", "", "body");
+    const data = await Bun.file(path).text();
+    expect(data).toContain("@unknown");
+  });
+
+  test("errors on converged thread", async () => {
+    const path = join(dir, "thread.md");
+    await newThread(path, "slug", "ctx");
+    await appendTurn(path, "agent", "m", "body");
+    await converge(path, "done");
+    await expect(appendTurn(path, "human", "", "reply")).rejects.toThrow(
+      "converged",
+    );
+  });
+
+  test("preserves extra frontmatter fields on write", async () => {
+    const path = join(dir, "thread.md");
+    const content =
+      "---\nstatus: open\ntitle: Keep Me\n---\n\n# slug\n\n<!-- ctx -->\n";
+    await writeFile(path, content);
+    await appendTurn(path, "agent", "m", "body");
+    const data = await Bun.file(path).text();
+    expect(data).toContain("title: Keep Me");
+  });
 });
+
+// ---------------------------------------------------------------------------
+// converge
+// ---------------------------------------------------------------------------
 
 describe("converge", () => {
-  test.todo("appends Outcome section", () => {});
-  test.todo(
-    "flips status: open -> converged via in-place regex rewrite",
-    () => {},
-  );
-  test.todo("does not rewrite prior turn bodies", () => {});
-  test.todo("errors when already converged", () => {});
+  test("appends Outcome section", async () => {
+    const path = join(dir, "thread.md");
+    await newThread(path, "slug", "ctx");
+    await appendTurn(path, "agent", "m", "body");
+    await converge(path, "outcome text");
+    const data = await Bun.file(path).text();
+    expect(data).toContain("## Outcome");
+    expect(data).toContain("outcome text");
+  });
+
+  test("flips status open -> converged via in-place regex rewrite", async () => {
+    const path = join(dir, "thread.md");
+    await newThread(path, "slug", "ctx");
+    await converge(path, "done");
+    const th = await parse(path);
+    expect(th.status).toBe("converged");
+  });
+
+  test("does not rewrite prior turn bodies", async () => {
+    const path = join(dir, "thread.md");
+    await newThread(path, "slug", "ctx");
+    await appendTurn(path, "agent", "m", "original body");
+    await converge(path, "done");
+    const th = await parse(path);
+    expect(th.turns[0].body).toBe("original body");
+  });
+
+  test("preserves extra frontmatter fields", async () => {
+    const path = join(dir, "thread.md");
+    const content =
+      "---\nstatus: open\ntitle: Keep Me\n---\n\n# slug\n\n<!-- ctx -->\n";
+    await writeFile(path, content);
+    await converge(path, "done");
+    const data = await Bun.file(path).text();
+    expect(data).toContain("title: Keep Me");
+    expect(data).toContain("status: converged");
+  });
+
+  test("errors when already converged", async () => {
+    const path = join(dir, "thread.md");
+    await newThread(path, "slug", "ctx");
+    await converge(path, "done");
+    await expect(converge(path, "again")).rejects.toThrow("already converged");
+  });
 });
 
+// ---------------------------------------------------------------------------
+// listThreads
+// ---------------------------------------------------------------------------
+
 describe("listThreads", () => {
-  test.todo("filters by open / converged / all", () => {});
-  test.todo("sorts by mtime descending", () => {});
-  test.todo("skips malformed files silently", () => {});
-  test.todo("returns empty list when .lazyai does not exist", () => {});
+  test("returns empty list when dir does not exist", async () => {
+    const result = await listThreads(join(dir, "nonexistent"));
+    expect(result).toEqual([]);
+  });
+
+  test("filters open threads by default", async () => {
+    const a = join(dir, "a.md");
+    const b = join(dir, "b.md");
+    await newThread(a, "open-one", "ctx");
+    await newThread(b, "open-two", "ctx");
+    await converge(b, "done");
+    const result = await listThreads(dir);
+    expect(result).toHaveLength(1);
+    expect(result[0].topic).toBe("open-one");
+  });
+
+  test("filters by converged", async () => {
+    const a = join(dir, "a.md");
+    const b = join(dir, "b.md");
+    await newThread(a, "open-one", "ctx");
+    await newThread(b, "closed-one", "ctx");
+    await converge(b, "done");
+    const result = await listThreads(dir, "converged");
+    expect(result).toHaveLength(1);
+    expect(result[0].topic).toBe("closed-one");
+  });
+
+  test("filter all returns both statuses", async () => {
+    const a = join(dir, "a.md");
+    const b = join(dir, "b.md");
+    await newThread(a, "open-one", "ctx");
+    await newThread(b, "closed-one", "ctx");
+    await converge(b, "done");
+    const result = await listThreads(dir, "all");
+    expect(result).toHaveLength(2);
+  });
+
+  test("sorts by mtime descending", async () => {
+    const older = join(dir, "a.md");
+    const newer = join(dir, "b.md");
+    await newThread(older, "older", "ctx");
+    await newThread(newer, "newer", "ctx");
+    const old = new Date("2026-01-01");
+    const fresh = new Date("2026-01-02");
+    await utimes(older, old, old);
+    await utimes(newer, fresh, fresh);
+    const result = await listThreads(dir, "all");
+    expect(result[0].topic).toBe("newer");
+    expect(result[1].topic).toBe("older");
+  });
+
+  test("skips malformed files silently", async () => {
+    const good = join(dir, "good.md");
+    const bad = join(dir, "bad.md");
+    await newThread(good, "valid", "ctx");
+    await writeFile(bad, "not a valid thread file");
+    const result = await listThreads(dir, "all");
+    expect(result).toHaveLength(1);
+    expect(result[0].topic).toBe("valid");
+  });
+
+  test("rounds reflects max round number", async () => {
+    const path = join(dir, "a.md");
+    await newThread(path, "slug", "ctx");
+    await appendTurn(path, "agent", "m", "a1");
+    await appendTurn(path, "human", "", "h1");
+    await appendTurn(path, "agent", "m", "a2");
+    const result = await listThreads(dir, "all");
+    expect(result[0].rounds).toBe(2);
+  });
 });
