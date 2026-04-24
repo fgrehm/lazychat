@@ -15,10 +15,11 @@ interface RunResult {
 
 async function run(
   args: string[],
-  opts: { cwd?: string; stdin?: string } = {},
+  opts: { cwd?: string; stdin?: string; env?: Record<string, string> } = {},
 ): Promise<RunResult> {
   const proc = Bun.spawn([BIN, ...args], {
     cwd: opts.cwd,
+    env: opts.env,
     stdin: opts.stdin !== undefined ? encoder.encode(opts.stdin) : "ignore",
     stdout: "pipe",
     stderr: "pipe",
@@ -217,13 +218,14 @@ describe("lazychat reply", () => {
     }
   });
 
-  test("errors when neither --stdin nor --body is given", async () => {
+  test("errors when agent turn has neither --stdin nor --body", async () => {
     const dir = await tempDir();
     try {
       const path = await writeThread(dir, "2026-01-01T0000-t.md", OPEN_THREAD);
-      const { stderr, exitCode } = await run(["reply", path, "--as", "human"], {
-        cwd: dir,
-      });
+      const { stderr, exitCode } = await run(
+        ["reply", path, "--as", "agent", "--model", "m"],
+        { cwd: dir },
+      );
       expect(exitCode).toBe(2);
       expect(stderr).toContain("--stdin or --body must be provided");
     } finally {
@@ -259,6 +261,179 @@ describe("lazychat reply", () => {
       );
       expect(exitCode).toBe(1);
       expect(stderr).toContain("converged");
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+});
+
+// ── reply --editor ────────────────────────────────────────────────────────────
+
+describe("lazychat reply --editor", () => {
+  test("writes editor buffer as the human turn body", async () => {
+    const dir = await tempDir();
+    try {
+      const path = await writeThread(
+        dir,
+        "2026-01-01T0000-t.md",
+        THREAD_WITH_TURNS,
+      );
+      const fixture = join(dir, "fixture.txt");
+      await writeFile(fixture, "my edited reply\n");
+      const { exitCode } = await run(
+        ["reply", path, "--as", "human", "--editor"],
+        { cwd: dir, env: { ...process.env, EDITOR: `cp ${fixture}` } },
+      );
+      expect(exitCode).toBe(0);
+      const content = await Bun.file(path).text();
+      expect(content).toContain("my edited reply");
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test("pre-populates buffer with the last turn quoted", async () => {
+    const dir = await tempDir();
+    try {
+      const path = await writeThread(
+        dir,
+        "2026-01-01T0000-t.md",
+        THREAD_WITH_TURNS,
+      );
+      const captured = join(dir, "captured.md");
+      const capturingEditor = `sh -c 'cat "$1" > ${captured}' --`;
+      await run(["reply", path, "--as", "human", "--editor"], {
+        cwd: dir,
+        env: { ...process.env, EDITOR: capturingEditor },
+      });
+      const buffer = await Bun.file(captured).text();
+      expect(buffer).toContain("> world");
+      expect(buffer).toContain("lazychat: write your reply below");
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test("aborts when editor leaves buffer empty", async () => {
+    const dir = await tempDir();
+    try {
+      const path = await writeThread(
+        dir,
+        "2026-01-01T0000-t.md",
+        THREAD_WITH_TURNS,
+      );
+      const empty = join(dir, "empty.txt");
+      await writeFile(empty, "");
+      const before = await Bun.file(path).text();
+      const { exitCode, stderr } = await run(
+        ["reply", path, "--as", "human", "--editor"],
+        { cwd: dir, env: { ...process.env, EDITOR: `cp ${empty}` } },
+      );
+      expect(exitCode).toBe(0);
+      expect(stderr).toContain("nothing appended");
+      expect(await Bun.file(path).text()).toBe(before);
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test("aborts when editor leaves template unchanged", async () => {
+    const dir = await tempDir();
+    try {
+      const path = await writeThread(
+        dir,
+        "2026-01-01T0000-t.md",
+        THREAD_WITH_TURNS,
+      );
+      const before = await Bun.file(path).text();
+      const { exitCode, stderr } = await run(
+        ["reply", path, "--as", "human", "--editor"],
+        { cwd: dir, env: { ...process.env, EDITOR: "true" } },
+      );
+      expect(exitCode).toBe(0);
+      expect(stderr).toContain("nothing appended");
+      expect(await Bun.file(path).text()).toBe(before);
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test("--as human with no source defaults to editor", async () => {
+    const dir = await tempDir();
+    try {
+      const path = await writeThread(dir, "2026-01-01T0000-t.md", OPEN_THREAD);
+      const fixture = join(dir, "fixture.txt");
+      await writeFile(fixture, "default-editor reply\n");
+      const { exitCode } = await run(["reply", path, "--as", "human"], {
+        cwd: dir,
+        env: { ...process.env, EDITOR: `cp ${fixture}` },
+      });
+      expect(exitCode).toBe(0);
+      expect(await Bun.file(path).text()).toContain("default-editor reply");
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test("rejects --editor for --as agent", async () => {
+    const dir = await tempDir();
+    try {
+      const path = await writeThread(dir, "2026-01-01T0000-t.md", OPEN_THREAD);
+      const { exitCode, stderr } = await run(
+        ["reply", path, "--as", "agent", "--editor"],
+        { cwd: dir },
+      );
+      expect(exitCode).toBe(2);
+      expect(stderr).toContain("--editor is only valid for --as human");
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test("rejects --editor combined with --body", async () => {
+    const dir = await tempDir();
+    try {
+      const path = await writeThread(dir, "2026-01-01T0000-t.md", OPEN_THREAD);
+      const { exitCode, stderr } = await run(
+        ["reply", path, "--as", "human", "--editor", "--body", "x"],
+        { cwd: dir },
+      );
+      expect(exitCode).toBe(2);
+      expect(stderr).toContain("mutually exclusive");
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+});
+
+// ── open ──────────────────────────────────────────────────────────────────────
+
+describe("lazychat open", () => {
+  test("spawns $EDITOR on the thread file", async () => {
+    const dir = await tempDir();
+    try {
+      const path = await writeThread(dir, "2026-01-01T0000-t.md", OPEN_THREAD);
+      const marker = join(dir, "opened-with");
+      const editor = `sh -c 'printf "%s" "$1" > ${marker}' --`;
+      const { exitCode } = await run(["open", path], {
+        cwd: dir,
+        env: { ...process.env, EDITOR: editor },
+      });
+      expect(exitCode).toBe(0);
+      expect(await Bun.file(marker).text()).toBe(path);
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test("errors when file does not exist", async () => {
+    const dir = await tempDir();
+    try {
+      const { exitCode, stderr } = await run(["open", "nope.md"], {
+        cwd: dir,
+      });
+      expect(exitCode).toBe(1);
+      expect(stderr).toContain("file not found");
     } finally {
       await rm(dir, { recursive: true });
     }
@@ -610,6 +785,17 @@ describe("lazychat list --json", () => {
     } finally {
       await rm(dir, { recursive: true });
     }
+  });
+});
+
+// ── skill ─────────────────────────────────────────────────────────────────────
+
+describe("lazychat skill", () => {
+  test("prints bundled SKILL-CLI.md content verbatim", async () => {
+    const expected = await Bun.file(join(ROOT, "SKILL-CLI.md")).text();
+    const { stdout, exitCode } = await run(["skill"]);
+    expect(exitCode).toBe(0);
+    expect(stdout).toBe(expected);
   });
 });
 

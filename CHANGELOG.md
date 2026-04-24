@@ -6,7 +6,9 @@
 
 - TypeScript + Bun rewrite of the entire project. The package is now published to npm as `lazychat` and installs a `lazychat` CLI binary.
 - `lazychat new <slug> [--context -]` — creates a thread file at `.lazyai/YYYY-MM-DDTHHMM-<slug>.md` and prints the path.
-- `lazychat reply <file> --as <agent|human> [--model <id>] [--stdin | --body <str>]` — appends a turn with proper round numbering and model attribution.
+- `lazychat reply <file> --as <agent|human> [--model <id>] [--stdin | --body <str> | --editor]` — appends a turn with proper round numbering and model attribution. `--editor` opens `$EDITOR` with the last turn pre-quoted; defaults to on for human turns with no body source. Empty or unchanged buffer aborts.
+- `lazychat open <file>` — opens a thread file in `$EDITOR` for reading or manual editing.
+- `lazychat skill` — prints the bundled `SKILL-CLI.md` content; embedded in the binary at build time so CLI installs no longer need a separate download step.
 - `lazychat converge <file> [--stdin | --body <str>]` — appends an `## Outcome` section and flips `status` to `converged`.
 - `lazychat list [--status open|converged|all] [--json]` — lists threads sorted by mtime, with optional JSON output.
 - `lazychat show <file> [--round N | --last | --since N]` — prints thread content or a filtered subset of turns.
