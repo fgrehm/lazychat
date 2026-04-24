@@ -43,7 +43,9 @@ export type ListFilter = "open" | "converged" | "all";
 // Pure core
 
 export function maxRound(turns: Turn[]): number {
-  return turns.length === 0 ? 0 : Math.max(...turns.map((t) => t.round));
+  let max = 0;
+  for (const t of turns) if (t.round > max) max = t.round;
+  return max;
 }
 
 export function slugifyTopic(s: string): string {

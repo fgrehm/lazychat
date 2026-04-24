@@ -8,6 +8,7 @@ import {
   appendTurn,
   converge,
   listThreads,
+  maxRound,
   newThread,
   nextRound,
   parse,
@@ -145,6 +146,31 @@ describe("nextRound", () => {
 
   test("human after agent-only round -> stays at max (no human at max)", () => {
     expect(nextRound([t(1, "agent"), t(2, "agent")], "human")).toBe(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// maxRound
+// ---------------------------------------------------------------------------
+
+describe("maxRound", () => {
+  test("empty thread -> 0", () => {
+    expect(maxRound([])).toBe(0);
+  });
+
+  test("returns the largest round across gaps and duplicates", () => {
+    expect(
+      maxRound([t(1, "agent"), t(3, "agent"), t(2, "human"), t(3, "human")]),
+    ).toBe(3);
+  });
+
+  test("handles arrays larger than the spread-arg limit", () => {
+    // Math.max(...arr) throws RangeError around 100k–500k args depending on
+    // engine; the loop implementation has no such cliff.
+    const big: Turn[] = Array.from({ length: 200_000 }, (_, i) =>
+      t(i + 1, "agent"),
+    );
+    expect(maxRound(big)).toBe(200_000);
   });
 });
 

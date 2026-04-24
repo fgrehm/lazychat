@@ -65,6 +65,11 @@ async function readStdin(): Promise<string> {
 const EDITOR_INSTRUCTIONS = `<!-- lazychat: write your reply below. Save empty or unchanged to abort. Lines quoted with '> ' are from the last turn. -->`;
 
 async function spawnEditor(path: string): Promise<number> {
+  // $EDITOR is interpolated into the shell command on purpose: users routinely
+  // set it to a multi-token invocation like "code -w" or "vim -O". Treating it
+  // as a single executable path (sh -c 'exec "$EDITOR" "$@"') would break
+  // those, and matches git's own behavior. EDITOR is user-controlled env, not
+  // attacker-controlled input — same trust boundary as $SHELL or $PATH.
   const editor = process.env["EDITOR"] || "vi";
   const proc = Bun.spawn(["sh", "-c", `exec ${editor} "$@"`, "sh", path], {
     stdin: "inherit",
@@ -148,6 +153,12 @@ async function cmdNew(rawSlug: string, opts: OptionValues): Promise<void> {
   }
   const body = context === "-" ? await readStdin() : DEFAULT_CONTEXT;
   const slug = slugifyTopic(rawSlug);
+  if (slug === "") {
+    process.stderr.write(
+      `error: topic ${JSON.stringify(rawSlug)} produces an empty slug; use at least one alphanumeric character\n`,
+    );
+    process.exit(2);
+  }
   const path = timestampedPath(LAZYAI_DIR, slug, new Date());
   await newThread(path, slug, body);
   process.stdout.write(path + "\n");
@@ -288,14 +299,14 @@ async function cmdShow(file: string, opts: OptionValues): Promise<void> {
   }
 
   const parsePositiveInt = (raw: string, flag: string): number => {
-    const n = Number(raw);
-    if (!Number.isInteger(n) || n < 1) {
+    // Strict decimal integer ≥ 1; rejects "0", "01", "1e2", "0x10", "1.0", etc.
+    if (!/^[1-9]\d*$/.test(raw)) {
       process.stderr.write(
         `error: ${flag} requires a positive integer, got ${JSON.stringify(raw)}\n`,
       );
       process.exit(2);
     }
-    return n;
+    return Number(raw);
   };
 
   const thread = await parse(file);
