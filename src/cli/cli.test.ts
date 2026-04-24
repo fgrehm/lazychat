@@ -478,7 +478,26 @@ describe("lazychat show", () => {
     }
   });
 
-  test("--since N prints turns where round > N", async () => {
+  test("--since N prints turns where round >= N (inclusive)", async () => {
+    const dir = await tempDir();
+    try {
+      const path = await writeThread(
+        dir,
+        "2026-01-01T0000-t.md",
+        THREAD_WITH_TURNS,
+      );
+      const { stdout, exitCode } = await run(["show", path, "--since", "2"], {
+        cwd: dir,
+      });
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain("## Round 2");
+      expect(stdout).not.toContain("## Round 1");
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test("--since N includes same-round turns after the agent wrote them", async () => {
     const dir = await tempDir();
     try {
       const path = await writeThread(
@@ -490,8 +509,8 @@ describe("lazychat show", () => {
         cwd: dir,
       });
       expect(exitCode).toBe(0);
+      expect(stdout).toContain("## Round 1 (human)");
       expect(stdout).toContain("## Round 2");
-      expect(stdout).not.toContain("## Round 1");
     } finally {
       await rm(dir, { recursive: true });
     }

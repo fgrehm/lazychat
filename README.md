@@ -85,7 +85,7 @@ Append an Outcome section and mark the thread converged.
 ```
 lazychat show <file> [--round N | --last | --since N]
 ```
-Print thread content. No flag prints the whole file. `--since N` prints only turns where round > N (useful for catch-up reads).
+Print thread content. No flag prints the whole file. `--since N` prints all turns at round N and later (inclusive) — useful for an agent to re-read its own turn at round N plus whatever the human added in response.
 
 ```
 lazychat list [--status open|converged|all] [--json]
