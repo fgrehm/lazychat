@@ -40,5 +40,8 @@
     "lint-staged": "^16.4.0",
     "prettier": "^3",
     "typescript": "^5"
+  },
+  "dependencies": {
+    "commander": "^14.0.3"
   }
 }

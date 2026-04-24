@@ -537,6 +537,64 @@ describe("lazychat status", () => {
       await rm(dir, { recursive: true });
     }
   });
+
+  test("--json outputs a valid JSON object", async () => {
+    const dir = await tempDir();
+    try {
+      const thread = `---\nstatus: open\n---\n\n# my-topic\n\n<!-- ctx -->\n\n---\n\n## Round 1 (human)\n\nhello\n`;
+      const path = await writeThread(dir, "2026-01-01T0000-t.md", thread);
+      const { stdout, exitCode } = await run(["status", path, "--json"], {
+        cwd: dir,
+      });
+      expect(exitCode).toBe(0);
+      const obj = JSON.parse(stdout);
+      expect(obj.status).toBe("open");
+      expect(obj.topic).toBe("my-topic");
+      expect(obj.rounds).toBe(1);
+      expect(typeof obj.updatedAt).toBe("string");
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+});
+
+// ── list --json ───────────────────────────────────────────────────────────────
+
+describe("lazychat list --json", () => {
+  test("outputs a valid JSON array with correct fields", async () => {
+    const dir = await tempDir();
+    try {
+      await writeThread(dir, "2026-01-01T0001-open.md", OPEN_THREAD);
+      await writeThread(dir, "2026-01-01T0002-conv.md", CONVERGED_THREAD);
+      const { stdout, exitCode } = await run(
+        ["list", "--status", "all", "--json"],
+        { cwd: dir },
+      );
+      expect(exitCode).toBe(0);
+      const arr = JSON.parse(stdout);
+      expect(Array.isArray(arr)).toBe(true);
+      expect(arr.length).toBe(2);
+      const item = arr[0];
+      expect(typeof item.path).toBe("string");
+      expect(["open", "converged"]).toContain(item.status);
+      expect(typeof item.topic).toBe("string");
+      expect(typeof item.rounds).toBe("number");
+      expect(typeof item.updatedAt).toBe("string");
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test("outputs empty array when no threads match", async () => {
+    const dir = await tempDir();
+    try {
+      const { stdout, exitCode } = await run(["list", "--json"], { cwd: dir });
+      expect(exitCode).toBe(0);
+      expect(JSON.parse(stdout)).toEqual([]);
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
 });
 
 // ── onboard ───────────────────────────────────────────────────────────────────
