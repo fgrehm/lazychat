@@ -877,7 +877,7 @@ describe("lazychat onboard", () => {
       const { stdout, exitCode } = await run(["onboard"], { cwd: dir });
       expect(exitCode).toBe(0);
       expect(stdout).toContain(
-        "lazychat — file-based async discussion protocol",
+        "lazychat: file-based async discussion protocol",
       );
       expect(stdout).toContain("# Active threads");
       expect(stdout).toContain(".lazyai/");

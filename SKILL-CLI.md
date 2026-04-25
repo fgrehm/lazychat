@@ -27,7 +27,7 @@ The key words MUST, MUST NOT, SHOULD, and MAY in this document are to be interpr
 3. **Write your first turn:**
    ```bash
    lazychat reply "$FILE" --as agent --model claude-sonnet-4-6 --stdin << 'EOF'
-   Your questions, proposals, or draft here. Freeform — number points,
+   Your questions, proposals, or draft here. Freeform: number points,
    quote options, include diffs, whatever serves clarity.
    EOF
    ```

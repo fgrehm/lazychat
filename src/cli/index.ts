@@ -23,7 +23,7 @@ const DEFAULT_CONTEXT =
   "One paragraph: what we are figuring out, why it matters, and what the target artifact is.";
 
 const PROTOCOL_BLOCK = `\
-lazychat — file-based async discussion protocol
+lazychat: file-based async discussion protocol
 
 Commands:
   new <topic-slug> [--context -]
