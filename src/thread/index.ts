@@ -218,9 +218,14 @@ export async function converge(path: string, body: string): Promise<void> {
     throw new Error(`${path}: thread is already converged`);
   }
 
-  const newContent = (
-    data.trimEnd() + `\n\n---\n\n## Outcome\n\n${body.trimEnd()}\n`
-  ).replace(/^status: open\s*$/m, "status: converged");
+  // Flip status only within the frontmatter block. A naive file-wide replace
+  // would rewrite a literal `status: open` line that happens to appear inside
+  // a turn body, violating the append-only invariant.
+  const withOutcome =
+    data.trimEnd() + `\n\n---\n\n## Outcome\n\n${body.trimEnd()}\n`;
+  const newContent = withOutcome.replace(FRONTMATTER_RE, (match, fm: string) =>
+    match.replace(fm, fm.replace(/^status: open\s*$/m, "status: converged")),
+  );
   await atomicWrite(path, newContent);
 }
 
