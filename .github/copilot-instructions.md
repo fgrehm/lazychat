@@ -33,3 +33,4 @@ lazychat is a file-based async discussion protocol: a shared markdown file in th
 
 - Conventional commits, present tense, title under 72 characters. Scopes (`feat(cli):`, `fix(thread):`) are welcome when they clarify the surface area.
 - Create a new commit rather than amending. Never skip hooks.
+- `.husky/*` hooks intentionally have no shebang or `husky.sh` sourcing. Husky v9 (used here) [removed that boilerplate](https://typicode.github.io/husky/migrate-from-v8.html); v8-style additions would be wrong for the current version.

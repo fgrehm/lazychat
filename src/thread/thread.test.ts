@@ -467,6 +467,24 @@ describe("converge", () => {
     await converge(path, "done");
     await expect(converge(path, "again")).rejects.toThrow("already converged");
   });
+
+  test("does not flip a literal 'status: open' line inside a turn body", async () => {
+    const path = join(dir, "thread.md");
+    await newThread(path, "slug", "ctx");
+    // A turn body that quotes frontmatter syntax, e.g. an agent discussing
+    // the protocol itself.
+    const turnBody = "discussing frontmatter:\n\n    status: open\n\nas above.";
+    await appendTurn(path, "agent", "m", turnBody);
+    await converge(path, "done");
+    const data = await Bun.file(path).text();
+    // Frontmatter flipped exactly once.
+    expect((data.match(/status: converged/g) ?? []).length).toBe(1);
+    // The literal `status: open` inside the turn body survives.
+    expect(data).toContain("    status: open");
+    const th = await parse(path);
+    expect(th.status).toBe("converged");
+    expect(th.turns[0].body).toContain("status: open");
+  });
 });
 
 // ---------------------------------------------------------------------------
