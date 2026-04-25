@@ -85,15 +85,15 @@ describe("slugifyTopic", () => {
 // ---------------------------------------------------------------------------
 
 describe("timestampedPath", () => {
-  test("formats YYYY-MM-DDTHHMM from local time with no seconds", () => {
-    const d = new Date(2026, 3, 23, 10, 42, 59); // Apr 23 2026 10:42:59 local
+  test("formats YYYY-MM-DDTHHMM from UTC with no seconds", () => {
+    const d = new Date(Date.UTC(2026, 3, 23, 10, 42, 59)); // Apr 23 2026 10:42:59 UTC
     const p = timestampedPath(".lazyai", "my-topic", d);
     expect(p).toContain("2026-04-23T1042");
     expect(p).not.toContain("59");
   });
 
   test("joins dir, timestamp and slug correctly", () => {
-    const d = new Date(2026, 0, 5, 8, 3, 0); // Jan 05 2026 08:03
+    const d = new Date(Date.UTC(2026, 0, 5, 8, 3, 0)); // Jan 05 2026 08:03 UTC
     const p = timestampedPath(".lazyai", "my-slug", d);
     expect(p).toBe(".lazyai/2026-01-05T0803-my-slug.md");
   });
