@@ -241,6 +241,59 @@ describe("parseBytes", () => {
     expect(th.turns[1].model).toBe("fgrehm");
   });
 
+  test("preserves a markdown horizontal rule inside a turn body", () => {
+    // A `---` line that is NOT followed by a turn header / Outcome is a
+    // legitimate markdown horizontal rule and must stay in the body.
+    const body = [
+      "---",
+      "",
+      "## Round 1 (human)",
+      "",
+      "intro paragraph",
+      "",
+      "---",
+      "",
+      "section after a horizontal rule",
+      "",
+      "---",
+      "",
+      "## Round 2 (agent) — @claude",
+      "",
+      "reply",
+    ].join("\n");
+    const th = parseBytes("f.md", threadFile(body));
+    expect(th.turns).toHaveLength(2);
+    expect(th.turns[0].body).toContain("intro paragraph");
+    expect(th.turns[0].body).toContain("---");
+    expect(th.turns[0].body).toContain("section after a horizontal rule");
+    expect(th.turns[1].body).toBe("reply");
+  });
+
+  test("preserves a horizontal rule before the Outcome separator", () => {
+    const body = [
+      "---",
+      "",
+      "## Round 1 (human)",
+      "",
+      "body with rule",
+      "",
+      "---",
+      "",
+      "trailing text after rule",
+      "",
+      "---",
+      "",
+      "## Outcome",
+      "",
+      "decided",
+    ].join("\n");
+    const th = parseBytes("f.md", threadFile(body, "status: converged"));
+    expect(th.turns).toHaveLength(1);
+    expect(th.turns[0].body).toContain("body with rule");
+    expect(th.turns[0].body).toContain("trailing text after rule");
+    expect(th.hasOutcome).toBe(true);
+  });
+
   test("human turns have empty model", () => {
     const body = `---\n\n${turnBlock(1, "human")}\n`;
     const th = parseBytes("f.md", threadFile(body));

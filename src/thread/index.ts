@@ -107,12 +107,23 @@ export function parseBytes(path: string, data: string): Thread {
     const model = m[3] ?? "";
     const headerLine = lines[i];
 
+    // A `---` line is a turn separator only when the next non-blank line is
+    // another turn header or `## Outcome`. Otherwise it's a legitimate
+    // markdown horizontal rule inside the turn body and must be preserved.
+    const isTurnSeparator = (idx: number): boolean => {
+      if (lines[idx] !== "---") return false;
+      let j = idx + 1;
+      while (j < lines.length && lines[j] === "") j++;
+      if (j >= lines.length) return false;
+      return TURN_HEADER_RE.test(lines[j]) || lines[j] === "## Outcome";
+    };
+
     const bodyStart = i + 1;
     let bodyEnd = bodyStart;
     while (
       bodyEnd < lines.length &&
-      lines[bodyEnd] !== "---" &&
-      !lines[bodyEnd].match(TURN_HEADER_RE)
+      !lines[bodyEnd].match(TURN_HEADER_RE) &&
+      !isTurnSeparator(bodyEnd)
     ) {
       bodyEnd++;
     }
