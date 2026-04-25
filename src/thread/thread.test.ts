@@ -201,6 +201,16 @@ describe("parseBytes", () => {
     expect(th.topic).toBe("test-topic");
   });
 
+  test("throws when H1 topic heading is missing", () => {
+    const raw = "---\nstatus: open\n---\n\nno heading here\n";
+    expect(() => parseBytes("f.md", raw)).toThrow(/missing topic heading/);
+  });
+
+  test("throws when H1 topic heading is empty", () => {
+    const raw = "---\nstatus: open\n---\n\n#   \n";
+    expect(() => parseBytes("f.md", raw)).toThrow(/must not be empty/);
+  });
+
   test("accepts CRLF line endings", () => {
     const raw = "---\r\nstatus: open\r\n---\r\n\r\n# crlf-topic\r\n";
     const th = parseBytes("f.md", raw);
