@@ -77,7 +77,7 @@ const CONVERGED_THREAD =
   `## Round 1 (human)\n\nhello\n\n---\n\n## Outcome\n\ndone\n`;
 const THREAD_WITH_TURNS =
   `---\nstatus: open\n---\n\n# test\n\n<!-- ctx -->\n\n---\n\n` +
-  `## Round 1 (human)\n\nhello\n\n---\n\n## Round 2 (agent) — @claude-opus-4-5\n\nworld\n`;
+  `## Round 1 (human)\n\nhello\n\n---\n\n## Round 2 (agent) - @claude-opus-4-5\n\nworld\n`;
 
 // ── new ──────────────────────────────────────────────────────────────────────
 
@@ -161,7 +161,7 @@ describe("lazychat reply", () => {
       );
       expect(exitCode).toBe(0);
       const content = await Bun.file(path).text();
-      expect(content).toContain("## Round 1 (agent) — @claude-opus-4-5");
+      expect(content).toContain("## Round 1 (agent) - @claude-opus-4-5");
     } finally {
       await rm(dir, { recursive: true });
     }
@@ -177,8 +177,9 @@ describe("lazychat reply", () => {
       );
       expect(exitCode).toBe(0);
       const content = await Bun.file(path).text();
-      expect(content).toContain("## Round 1 (human)");
-      expect(content).not.toContain(" — @");
+      // Human turn header line should end right after the role parens, no
+      // attribution segment of any separator flavor.
+      expect(content).toMatch(/^## Round 1 \(human\)\s*$/m);
     } finally {
       await rm(dir, { recursive: true });
     }
@@ -781,10 +782,10 @@ describe("lazychat status", () => {
   test("reports max round number, not parsed turn count", async () => {
     const dir = await tempDir();
     try {
-      // Two Round 2 turns (gap at Round 1) — turns.length=2, max round=2.
+      // Two Round 2 turns (gap at Round 1): turns.length=2, max round=2.
       const thread =
         `---\nstatus: open\n---\n\n# gap-test\n\n<!-- ctx -->\n\n---\n\n` +
-        `## Round 2 (agent) — @x\n\nfirst\n\n---\n\n## Round 2 (human)\n\nsecond\n`;
+        `## Round 2 (agent) - @x\n\nfirst\n\n---\n\n## Round 2 (human)\n\nsecond\n`;
       const path = await writeThread(dir, "2026-01-01T0000-t.md", thread);
       const { stdout } = await run(["status", path], { cwd: dir });
       expect(stdout).toContain("rounds: 2");

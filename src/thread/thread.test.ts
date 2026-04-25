@@ -35,7 +35,7 @@ function turnBlock(
   model?: string,
   body = "body",
 ) {
-  const attr = model ? ` — @${model}` : "";
+  const attr = model ? ` - @${model}` : "";
   return `## Round ${round} (${role})${attr}\n\n${body}`;
 }
 
@@ -100,7 +100,7 @@ describe("timestampedPath", () => {
 });
 
 // ---------------------------------------------------------------------------
-// nextRound — 11-case truth table
+// nextRound: 11-case truth table
 // ---------------------------------------------------------------------------
 
 describe("nextRound", () => {
@@ -215,7 +215,7 @@ describe("parseBytes", () => {
     expect(th.turns[0].role).toBe("human");
   });
 
-  test("captures agent model attribution after the em-dash", () => {
+  test("captures agent model attribution after the separator", () => {
     const body = `---\n\n${turnBlock(1, "agent", "claude-opus-4-7")}\n`;
     const th = parseBytes("f.md", threadFile(body));
     expect(th.turns[0].model).toBe("claude-opus-4-7");
@@ -257,7 +257,7 @@ describe("parseBytes", () => {
       "",
       "---",
       "",
-      "## Round 2 (agent) — @claude",
+      "## Round 2 (agent) - @claude",
       "",
       "reply",
     ].join("\n");
@@ -403,12 +403,12 @@ describe("newThread", () => {
 // ---------------------------------------------------------------------------
 
 describe("appendTurn", () => {
-  test("appends agent turn with em-dash attribution", async () => {
+  test("appends agent turn with hyphen attribution", async () => {
     const path = join(dir, "thread.md");
     await newThread(path, "slug", "ctx");
     await appendTurn(path, "agent", "claude-opus-4-7", "hello");
     const data = await Bun.file(path).text();
-    expect(data).toContain("## Round 1 (agent) — @claude-opus-4-7");
+    expect(data).toContain("## Round 1 (agent) - @claude-opus-4-7");
     expect(data).toContain("hello");
   });
 
@@ -418,8 +418,8 @@ describe("appendTurn", () => {
     await appendTurn(path, "agent", "m", "first");
     await appendTurn(path, "human", "", "reply");
     const data = await Bun.file(path).text();
-    expect(data).toContain("## Round 1 (human)\n");
-    expect(data).not.toContain("## Round 1 (human) —");
+    // Header line must end right after the role parens, no attribution.
+    expect(data).toMatch(/^## Round 1 \(human\)\s*$/m);
   });
 
   test("ignores model for human turns", async () => {

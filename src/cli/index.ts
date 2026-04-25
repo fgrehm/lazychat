@@ -55,7 +55,7 @@ Commands:
 
 Protocol rules:
   - Threads are append-only. Never edit prior turns.
-  - Agent turns carry model attribution after an em-dash (— @model-id).
+  - Agent turns carry model attribution as " - @model-id" after the role.
   - Converged threads are read-only.
   - Thread files live in .lazyai/ in the current working tree.`;
 
@@ -70,7 +70,7 @@ async function spawnEditor(path: string): Promise<number> {
   // set it to a multi-token invocation like "code -w" or "vim -O". Treating it
   // as a single executable path (sh -c 'exec "$EDITOR" "$@"') would break
   // those, and matches git's own behavior. EDITOR is user-controlled env, not
-  // attacker-controlled input — same trust boundary as $SHELL or $PATH.
+  // attacker-controlled input, same trust boundary as $SHELL or $PATH.
   const editor = process.env["EDITOR"] || "vi";
   const proc = Bun.spawn(["sh", "-c", `exec ${editor} "$@"`, "sh", path], {
     stdin: "inherit",
@@ -370,7 +370,7 @@ async function cmdOnboard(): Promise<void> {
   );
   if (active.length === 0) {
     process.stdout.write(
-      "# No active threads in .lazyai/ — use `lazychat new <topic-slug>` to start one.\n",
+      "# No active threads in .lazyai/. Use `lazychat new <topic-slug>` to start one.\n",
     );
   } else {
     for (const s of active) {
@@ -432,7 +432,7 @@ program
   .option("--last", "Print the last turn")
   .option(
     "--since <n>",
-    "Print turns at round N and later — pass the round you last wrote for catch-up",
+    "Print turns at round N and later. Pass the round you last wrote for catch-up.",
   )
   .action(cmdShow);
 
