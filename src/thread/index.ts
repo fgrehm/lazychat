@@ -144,11 +144,15 @@ export function parseBytes(path: string, data: string): Thread {
     }
 
     const bodyLines = lines.slice(bodyStart, bodyEnd);
+    let bs = 0;
+    let be = bodyLines.length;
+    while (bs < be && bodyLines[bs] === "") bs++;
+    while (be > bs && bodyLines[be - 1] === "") be--;
     turns.push({
       round,
       role,
       model,
-      body: bodyLines.join("\n").trimEnd(),
+      body: bodyLines.slice(bs, be).join("\n"),
       raw: [headerLine, ...bodyLines].join("\n"),
     });
   }

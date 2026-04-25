@@ -376,6 +376,20 @@ describe("parseBytes", () => {
     expect(th.hasOutcome).toBe(true);
   });
 
+  test("preserves leading whitespace on the first body line", () => {
+    const body = [
+      "---",
+      "",
+      "## Round 1 (agent)",
+      "",
+      "    indented code",
+      "    more code",
+    ].join("\n");
+    const th = parseBytes("f.md", threadFile(body));
+    expect(th.turns).toHaveLength(1);
+    expect(th.turns[0].body).toBe("    indented code\n    more code");
+  });
+
   test("throws on missing frontmatter", () => {
     expect(() => parseBytes("f.md", "# no frontmatter\n")).toThrow();
   });
