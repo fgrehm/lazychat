@@ -64,7 +64,7 @@ lazychat status <file> [--json]
 
 ## Conventions
 
-- **Attribution.** Agent turns MUST include `--model <your-model-id>` so the record shows which model wrote each turn.
+- **Attribution.** Agent turns SHOULD include `--model <your-model-id>` so the record shows which model wrote each turn. If omitted, the CLI records the turn as `@unknown`.
 - **Quote-and-reply.** When replying to specific lines, you SHOULD use `>` to quote the line or block, then write your reply below it.
 - **Numbered questions.** When a turn has multiple questions, you SHOULD label them `**Q1.**` / `**Q2.**` so the human can quote and reply cleanly.
 - **Long content.** You SHOULD wrap tool output, long code, or verbatim quotes in `<details><summary>...</summary>...</details>` to keep the reading flow clean.
