@@ -23,6 +23,12 @@ lazychat is a file-based async discussion protocol: a shared markdown file in th
 - In prose (comments, docs, commit messages), use commas, periods, or parentheses for mid-sentence breaks. Not em-dashes or double-dashes.
 - File writes must be atomic: use the `atomicWrite` helper (temp file in the same directory + `rename`) for updates, or `writeFile({ flag: "wx" })` for exclusive create. Do not propose plain overwriting writes.
 - Skip marketing fluff in docs and reviews ("comprehensive", "robust", "seamless", "cutting-edge"). Be direct.
+- When a `let` is assigned across `if`/`else` branches, give it an explicit type annotation. TypeScript narrows it correctly under `strict`, but reviewers may flag the bare declaration as implicit `any`.
+
+## Docs and conventions
+
+- A `MUST` in `SKILL.md` or `SKILL-CLI.md` must be enforced by the CLI. If the CLI accepts a fallback (e.g. `@unknown` for missing `--model`), use `SHOULD` and mention the fallback so docs match observable behavior.
+- When changing a written convention (turn-header separator, status values, file naming), audit `examples/` and `.lazyai/` for stragglers in the same commit. Tracked example threads are part of the contract; drift is misleading.
 
 ## Testing
 
