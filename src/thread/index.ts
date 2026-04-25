@@ -57,7 +57,7 @@ export function slugifyTopic(s: string): string {
 
 export function timestampedPath(dir: string, slug: string, now: Date): string {
   const p = (n: number) => String(n).padStart(2, "0");
-  const ts = `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}T${p(now.getHours())}${p(now.getMinutes())}`;
+  const ts = `${now.getUTCFullYear()}-${p(now.getUTCMonth() + 1)}-${p(now.getUTCDate())}T${p(now.getUTCHours())}${p(now.getUTCMinutes())}`;
   return join(dir, `${ts}-${slug}.md`);
 }
 

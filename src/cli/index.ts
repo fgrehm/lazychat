@@ -138,8 +138,8 @@ function padTable(rows: string[][]): string {
 
 function fmtDate(d: Date, seconds = false): string {
   const p = (n: number) => String(n).padStart(2, "0");
-  const base = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
-  return seconds ? `${base}:${p(d.getSeconds())}` : base;
+  const base = `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}T${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
+  return seconds ? `${base}:${p(d.getUTCSeconds())}` : base;
 }
 
 // Commands
