@@ -330,6 +330,52 @@ describe("parseBytes", () => {
     expect(th.hasOutcome).toBe(false);
   });
 
+  test("hasOutcome is false when '## Outcome' appears only inside a turn body", () => {
+    // Agent quotes the literal heading while discussing the protocol. There
+    // is no real Outcome section: status stays open.
+    const body = [
+      "---",
+      "",
+      "## Round 1 (agent) - @claude",
+      "",
+      "When converged, lazychat appends a section like:",
+      "",
+      "## Outcome",
+      "",
+      "decided: X",
+    ].join("\n");
+    const th = parseBytes("f.md", threadFile(body));
+    expect(th.hasOutcome).toBe(false);
+  });
+
+  test("hasOutcome accepts Outcome heading with extra whitespace", () => {
+    const body = "---\n\n##  Outcome  \n\ndone\n";
+    const th = parseBytes("f.md", threadFile(body, "status: converged"));
+    expect(th.hasOutcome).toBe(true);
+  });
+
+  test("isTurnSeparator before Outcome tolerates extra whitespace", () => {
+    // Turn body must end at the `---` preceding `##  Outcome  ` (extra
+    // spaces); the Outcome heading must not be swallowed into the body.
+    const body = [
+      "---",
+      "",
+      "## Round 1 (human)",
+      "",
+      "body text",
+      "",
+      "---",
+      "",
+      "##  Outcome  ",
+      "",
+      "decided",
+    ].join("\n");
+    const th = parseBytes("f.md", threadFile(body, "status: converged"));
+    expect(th.turns).toHaveLength(1);
+    expect(th.turns[0].body).toBe("body text");
+    expect(th.hasOutcome).toBe(true);
+  });
+
   test("throws on missing frontmatter", () => {
     expect(() => parseBytes("f.md", "# no frontmatter\n")).toThrow();
   });

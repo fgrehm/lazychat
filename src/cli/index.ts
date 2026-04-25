@@ -31,8 +31,9 @@ Commands:
       --context - reads one paragraph of context from stdin.
 
   reply <file> --as <agent|human> [--model <id>] [--stdin | --body <str>]
-      Append a turn. --as is required. Exactly one of --stdin or --body must be given.
-      --model is only meaningful for agent turns (default: unknown).
+      Append a turn. --as is required. For agent turns, provide exactly one
+      of --stdin or --body. --model is only meaningful for agent turns
+      (default: unknown). Humans have additional flags; see "lazychat reply --help".
 
   converge <file> --stdin | --body <str>
       Append an Outcome section and mark the thread converged.
