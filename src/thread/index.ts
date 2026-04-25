@@ -94,9 +94,35 @@ export function parseBytes(path: string, data: string): Thread {
   const h1Match = text.match(H1_RE);
   const topic = h1Match ? h1Match[1].trim() : "";
 
-  const hasOutcome = OUTCOME_RE.test(text);
   const turns: Turn[] = [];
   const lines = text.split("\n");
+
+  // A `---` line is a turn separator only when the next non-blank line is
+  // another turn header or an Outcome heading. Otherwise it's a legitimate
+  // markdown horizontal rule inside the turn body and must be preserved.
+  const isTurnSeparator = (idx: number): boolean => {
+    if (lines[idx] !== "---") return false;
+    let j = idx + 1;
+    while (j < lines.length && lines[j] === "") j++;
+    if (j >= lines.length) return false;
+    return TURN_HEADER_RE.test(lines[j]) || OUTCOME_RE.test(lines[j]);
+  };
+
+  // hasOutcome means a real Outcome section exists, i.e. an Outcome heading
+  // that sits at a section boundary (preceded by `---`, like converge() writes).
+  // Matching OUTCOME_RE against the whole file would also fire on a turn body
+  // that quotes the literal heading, which is not an Outcome section.
+  let hasOutcome = false;
+  for (let i = 0; i < lines.length; i++) {
+    if (isTurnSeparator(i)) {
+      let j = i + 1;
+      while (j < lines.length && lines[j] === "") j++;
+      if (j < lines.length && OUTCOME_RE.test(lines[j])) {
+        hasOutcome = true;
+        break;
+      }
+    }
+  }
 
   for (let i = 0; i < lines.length; i++) {
     const m = lines[i].match(TURN_HEADER_RE);
@@ -106,17 +132,6 @@ export function parseBytes(path: string, data: string): Thread {
     const role = m[2] as Role;
     const model = m[3] ?? "";
     const headerLine = lines[i];
-
-    // A `---` line is a turn separator only when the next non-blank line is
-    // another turn header or `## Outcome`. Otherwise it's a legitimate
-    // markdown horizontal rule inside the turn body and must be preserved.
-    const isTurnSeparator = (idx: number): boolean => {
-      if (lines[idx] !== "---") return false;
-      let j = idx + 1;
-      while (j < lines.length && lines[j] === "") j++;
-      if (j >= lines.length) return false;
-      return TURN_HEADER_RE.test(lines[j]) || lines[j] === "## Outcome";
-    };
 
     const bodyStart = i + 1;
     let bodyEnd = bodyStart;
