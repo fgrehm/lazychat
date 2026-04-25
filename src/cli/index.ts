@@ -34,8 +34,9 @@ Commands:
       Append a turn. --as is required. Exactly one of --stdin or --body must be given.
       --model is only meaningful for agent turns (default: unknown).
 
-  converge <file> [--stdin | --body <str>]
+  converge <file> --stdin | --body <str>
       Append an Outcome section and mark the thread converged.
+      Exactly one of --stdin or --body must be given.
 
   list [--status open|converged|all] [--json]
       List threads in .lazyai/, most recent first. Default: open.

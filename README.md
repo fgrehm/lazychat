@@ -86,9 +86,9 @@ lazychat open <file>
 Open a thread file in `$EDITOR` for reading or manual editing.
 
 ```
-lazychat converge <file> [--stdin | --body <str>]
+lazychat converge <file> --stdin | --body <str>
 ```
-Append an Outcome section and mark the thread converged.
+Append an Outcome section and mark the thread converged. Exactly one of `--stdin` or `--body` must be given.
 
 ```
 lazychat show <file> [--round N | --last | --since N]

@@ -521,6 +521,17 @@ describe("converge", () => {
     await expect(converge(path, "again")).rejects.toThrow("already converged");
   });
 
+  test("flips status with arbitrary whitespace (status:open, status:  open)", async () => {
+    for (const line of ["status:open", "status:  open", "status:\topen"]) {
+      const path = join(dir, `t-${line.replace(/\s/g, "_")}.md`);
+      await writeFile(path, `---\n${line}\n---\n\n# slug\n\n<!-- ctx -->\n`);
+      await converge(path, "done");
+      const data = await Bun.file(path).text();
+      expect(data).toContain("status: converged");
+      expect(data).not.toMatch(/^status:\s*open\s*$/m);
+    }
+  });
+
   test("does not flip a literal 'status: open' line inside a turn body", async () => {
     const path = join(dir, "thread.md");
     await newThread(path, "slug", "ctx");
