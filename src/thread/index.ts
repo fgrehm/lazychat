@@ -237,7 +237,7 @@ export async function appendTurn(
 
   await atomicWrite(
     path,
-    data.trimEnd() + `\n\n---\n\n${header}\n\n${body.trimEnd()}\n`,
+    data.replace(/\n+$/, "") + `\n\n---\n\n${header}\n\n${body.trimEnd()}\n`,
   );
   return round;
 }
@@ -254,7 +254,7 @@ export async function converge(path: string, body: string): Promise<void> {
   // would rewrite a literal `status: open` line that happens to appear inside
   // a turn body, violating the append-only invariant.
   const withOutcome =
-    data.trimEnd() + `\n\n---\n\n## Outcome\n\n${body.trimEnd()}\n`;
+    data.replace(/\n+$/, "") + `\n\n---\n\n## Outcome\n\n${body.trimEnd()}\n`;
   // The flip pattern mirrors STATUS_RE's whitespace tolerance so a hand-edited
   // `status:open` (or `status:  open`) still gets converged.
   const newContent = withOutcome.replace(FRONTMATTER_RE, (match, fm: string) =>

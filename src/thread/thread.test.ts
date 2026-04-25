@@ -539,6 +539,18 @@ describe("appendTurn", () => {
     const data = await Bun.file(path).text();
     expect(data).toContain("title: Keep Me");
   });
+
+  test("preserves trailing whitespace on the prior last line", async () => {
+    // Markdown hard break = two trailing spaces. trimEnd() would silently
+    // strip them and mutate the prior turn body, breaking append-only.
+    const path = join(dir, "thread.md");
+    const content =
+      "---\nstatus: open\n---\n\n# slug\n\n<!-- ctx -->\n\n---\n\n## Round 1 (agent) - @m\n\nfirst line  \nsecond line\n";
+    await writeFile(path, content);
+    await appendTurn(path, "human", "", "reply");
+    const data = await Bun.file(path).text();
+    expect(data).toContain("first line  \nsecond line");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -571,6 +583,16 @@ describe("converge", () => {
     await converge(path, "done");
     const th = await parse(path);
     expect(th.turns[0].body).toBe("original body");
+  });
+
+  test("preserves trailing whitespace on the prior last line", async () => {
+    const path = join(dir, "thread.md");
+    const content =
+      "---\nstatus: open\n---\n\n# slug\n\n<!-- ctx -->\n\n---\n\n## Round 1 (agent) - @m\n\nfirst line  \nsecond line\n";
+    await writeFile(path, content);
+    await converge(path, "done");
+    const data = await Bun.file(path).text();
+    expect(data).toContain("first line  \nsecond line");
   });
 
   test("preserves extra frontmatter fields", async () => {
