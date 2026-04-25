@@ -92,7 +92,9 @@ export function parseBytes(path: string, data: string): Thread {
   const status = statusMatch[1] as Status;
 
   const h1Match = text.match(H1_RE);
-  const topic = h1Match ? h1Match[1].trim() : "";
+  if (!h1Match) throw new Error(`${path}: missing topic heading`);
+  const topic = h1Match[1].trim();
+  if (!topic) throw new Error(`${path}: topic heading must not be empty`);
 
   const turns: Turn[] = [];
   const lines = text.split("\n");
