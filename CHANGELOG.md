@@ -22,6 +22,7 @@
 
 - README now documents both install paths: CLI + `SKILL-CLI.md` for environments with the binary, and `SKILL.md` only for environments without.
 - `bin` field points to `src/cli/index.ts` (Bun shebang) rather than a compiled binary, so the package works without a platform-specific build step.
+- `SKILL.md` and `SKILL-CLI.md`: agents SHOULD NOT write `---` separators inside turn bodies; the separator is inserted between turns. Agent attribution relaxed from MUST to SHOULD with a note that omitted models record as `@unknown`, matching CLI behavior.
 
 ## v0.0.2 - 2026-04-22
 
