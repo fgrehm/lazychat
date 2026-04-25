@@ -11,7 +11,7 @@ lazychat is a file-based async discussion protocol: a shared markdown file in th
 ## Protocol invariants
 
 - Threads are **append-only**. Never edit or reorder prior turns.
-- The protocol is **stop-and-wait**: the agent writes, stops, and waits for the human. Concurrent writers are out of scope — locking or optimistic-concurrency schemes are not required unless the scope explicitly changes.
+- The protocol is **stop-and-wait**: the agent writes, stops, and waits for the human. Concurrent writers are out of scope; locking or optimistic-concurrency schemes are not required unless the scope explicitly changes.
 - Turn headers are written as `## Round N (role) — @model-id` using an em-dash, but the parser also accepts `-` and `–` so hand-typed turns do not silently drop and collide round numbers. This forgiveness is intentional.
 - A thread with `status: converged` is read-only.
 
