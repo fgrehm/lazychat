@@ -41,6 +41,7 @@ status: open
 
 - **Turn headers.** Each turn MUST start with `## Round N (agent)` or `## Round N (human)`. Agent turns SHOULD append `- @<model-id>` for attribution. If the model id is omitted, tooling may record the turn as `@unknown`.
 - **Append, don't insert.** New turns MUST be added at the end of the file. Do not write above existing turns or at the top of the file.
+- **No turn separators in your body.** The `---` line between turns is inserted for you. Do not write `---` separators inside a turn body; they make the file harder to scan.
 - **Quote-and-reply.** When replying to specific lines, you SHOULD use `>` to quote the line or block, then write your reply below it.
 - **Numbered questions.** When an agent turn has multiple questions, you SHOULD label them `**Q1.**` / `**Q2.**` so the human can quote and reply cleanly.
 - **Long content.** You SHOULD wrap tool output, long code, or verbatim quotes in `<details><summary>...</summary>...</details>` to keep the reading flow clean.
