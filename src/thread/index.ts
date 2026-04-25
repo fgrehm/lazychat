@@ -148,7 +148,7 @@ export function parseBytes(path: string, data: string): Thread {
       round,
       role,
       model,
-      body: bodyLines.join("\n").trim(),
+      body: bodyLines.join("\n").trimEnd(),
       raw: [headerLine, ...bodyLines].join("\n"),
     });
   }
