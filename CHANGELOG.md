@@ -5,18 +5,18 @@
 ### Added
 
 - TypeScript + Bun rewrite of the entire project. Distribution is cross-compiled, self-contained `lazychat` binaries (Linux/Darwin × x64/arm64) published to GitHub Releases; an npm package is intentionally not published in this release.
-- `lazychat new <slug> [--context -]` — creates a thread file at `.lazyai/YYYY-MM-DDTHHMM-<slug>.md` and prints the path.
-- `lazychat reply <file> --as <agent|human> [--model <id>] [--stdin | --body <str> | --editor]` — appends a turn with proper round numbering and model attribution. `--editor` opens `$EDITOR` with the last turn pre-quoted; defaults to on for human turns with no body source. Empty or unchanged buffer aborts.
-- `lazychat open <file>` — opens a thread file in `$EDITOR` for reading or manual editing.
-- `lazychat skill` — prints the bundled `SKILL-CLI.md` content; embedded in the binary at build time so CLI installs no longer need a separate download step.
-- `lazychat converge <file> [--stdin | --body <str>]` — appends an `## Outcome` section and flips `status` to `converged`.
-- `lazychat list [--status open|converged|all] [--json]` — lists threads sorted by mtime, with optional JSON output.
-- `lazychat show <file> [--round N | --last | --since N]` — prints thread content or a filtered subset of turns.
-- `lazychat status <file> [--json]` — prints frontmatter, round count, and last-updated timestamp.
-- `lazychat onboard` — prints the protocol reference and up to 10 active threads; intended as a session-start command for agents.
+- `lazychat new <slug> [--context -]`: creates a thread file at `.lazyai/YYYY-MM-DDTHHMM-<slug>.md` and prints the path.
+- `lazychat reply <file> --as <agent|human> [--model <id>] [--stdin | --body <str> | --editor]`: appends a turn with proper round numbering and model attribution. `--editor` opens `$EDITOR` with the last turn pre-quoted; defaults to on for human turns with no body source. Empty or unchanged buffer aborts.
+- `lazychat open <file>`: opens a thread file in `$EDITOR` for reading or manual editing.
+- `lazychat skill`: prints the bundled `SKILL-CLI.md` content; embedded in the binary at build time so CLI installs no longer need a separate download step.
+- `lazychat converge <file> [--stdin | --body <str>]`: appends an `## Outcome` section and flips `status` to `converged`.
+- `lazychat list [--status open|converged|all] [--json]`: lists threads sorted by mtime, with optional JSON output.
+- `lazychat show <file> [--round N | --last | --since N]`: prints thread content or a filtered subset of turns.
+- `lazychat status <file> [--json]`: prints frontmatter, round count, and last-updated timestamp.
+- `lazychat onboard`: prints the protocol reference and up to 10 active threads; intended as a session-start command for agents.
 - Per-command help via `lazychat <command> --help` (powered by Commander).
-- `SKILL-CLI.md` — companion skill for agents that have the CLI installed. Uses shell commands and heredocs instead of raw file edits; significantly shorter than `SKILL.md`.
-- `examples/2026-04-23T1042-ts-port-open-questions.md` — converged thread from the TS port design session.
+- `SKILL-CLI.md`: companion skill for agents that have the CLI installed. Uses shell commands and heredocs instead of raw file edits; significantly shorter than `SKILL.md`.
+- `examples/2026-04-23T1042-ts-port-open-questions.md`: converged thread from the TS port design session.
 
 ### Changed
 

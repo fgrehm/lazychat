@@ -45,7 +45,7 @@ wget https://github.com/fgrehm/lazychat/releases/download/v0.0.3/lazychat-linux-
 chmod +x ~/.local/bin/lazychat
 ```
 
-The binary is self-contained (the Bun runtime is bundled) — no other dependencies.
+The binary is self-contained (the Bun runtime is bundled), no other dependencies.
 
 Then install the CLI skill for your agent. The skill is bundled with the binary, so just dump it:
 
@@ -93,7 +93,7 @@ Append an Outcome section and mark the thread converged. Exactly one of `--stdin
 ```
 lazychat show <file> [--round N | --last | --since N]
 ```
-Print thread content. No flag prints the whole file. `--since N` prints all turns at round N and later (inclusive) — useful for an agent to re-read its own turn at round N plus whatever the human added in response.
+Print thread content. No flag prints the whole file. `--since N` prints all turns at round N and later (inclusive). Useful for an agent to re-read its own turn at round N plus whatever the human added in response.
 
 ```
 lazychat list [--status open|converged|all] [--json]
@@ -119,9 +119,9 @@ Print the bundled `SKILL-CLI.md` to stdout. Useful for installing the skill into
 
 lazychat sits next to a handful of projects that use shared markdown files as agent state, but differs in focus:
 
-- [tick-md](https://purplehorizons.io/blog/tick-md-multi-agent-coordination-markdown) — multi-agent coordination via a shared markdown task board. Agent-to-agent, with file locking, an MCP server, and a dashboard.
-- [llm-md](https://llm.md/) — a DSL for LLM-to-LLM conversations in markdown. Structured agent turns with explicit syntax.
-- Basic Memory — bidirectional LLM-markdown knowledge persistence via MCP. Knowledge-graph shape, not discussion shape.
+- [tick-md](https://purplehorizons.io/blog/tick-md-multi-agent-coordination-markdown): multi-agent coordination via a shared markdown task board. Agent-to-agent, with file locking, an MCP server, and a dashboard.
+- [llm-md](https://llm.md/): a DSL for LLM-to-LLM conversations in markdown. Structured agent turns with explicit syntax.
+- Basic Memory: bidirectional LLM-markdown knowledge persistence via MCP. Knowledge-graph shape, not discussion shape.
 
 lazychat is narrower: human plus agent, freeform replies, explicit stop-and-wait, file-as-record.
 
