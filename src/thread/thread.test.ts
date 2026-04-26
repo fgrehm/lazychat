@@ -206,6 +206,12 @@ describe("parseBytes", () => {
     expect(() => parseBytes("f.md", raw)).toThrow(/missing topic heading/);
   });
 
+  test("does not pick up H1 inside a turn body as the topic", () => {
+    const raw =
+      "---\nstatus: open\n---\n\n---\n\n## Round 1 (human)\n\n# not the topic\n\nbody\n";
+    expect(() => parseBytes("f.md", raw)).toThrow(/missing topic heading/);
+  });
+
   test("throws when H1 topic heading is empty", () => {
     const raw = "---\nstatus: open\n---\n\n#   \n";
     expect(() => parseBytes("f.md", raw)).toThrow(/must not be empty/);
