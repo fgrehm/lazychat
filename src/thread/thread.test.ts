@@ -466,6 +466,24 @@ describe("newThread", () => {
       "already exists",
     );
   });
+
+  test("rejects empty topic", async () => {
+    await expect(newThread(join(dir, "t.md"), "   ", "ctx")).rejects.toThrow(
+      "topic must not be empty",
+    );
+  });
+
+  test("rejects multi-line topic", async () => {
+    await expect(
+      newThread(join(dir, "t.md"), "line1\nline2", "ctx"),
+    ).rejects.toThrow("single line");
+  });
+
+  test("rejects context containing -->", async () => {
+    await expect(
+      newThread(join(dir, "t.md"), "slug", "bad --> here"),
+    ).rejects.toThrow("-->");
+  });
 });
 
 // ---------------------------------------------------------------------------
