@@ -91,13 +91,25 @@ export function parseBytes(path: string, data: string): Thread {
     throw new Error(`${path}: frontmatter missing valid status`);
   const status = statusMatch[1] as Status;
 
-  const h1Match = text.match(H1_RE);
-  if (!h1Match) throw new Error(`${path}: missing topic heading`);
-  const topic = h1Match[1].trim();
-  if (!topic) throw new Error(`${path}: topic heading must not be empty`);
-
   const turns: Turn[] = [];
   const lines = text.split("\n");
+
+  // Search for the topic H1 only in the prelude: lines after frontmatter and
+  // before the first turn header or Outcome boundary. Searching the whole file
+  // would pick up a `# heading` inside a turn body if the real H1 is missing.
+  const fmLineCount = fmMatch[0].split("\n").length - 1;
+  let topicRaw: string | undefined;
+  for (let i = fmLineCount; i < lines.length; i++) {
+    if (TURN_HEADER_RE.test(lines[i]) || lines[i] === "---") break;
+    const h1 = lines[i].match(H1_RE);
+    if (h1) {
+      topicRaw = h1[1].trim();
+      break;
+    }
+  }
+  if (topicRaw === undefined) throw new Error(`${path}: missing topic heading`);
+  if (!topicRaw) throw new Error(`${path}: topic heading must not be empty`);
+  const topic = topicRaw;
 
   // A `---` line is a turn separator only when the next non-blank line is
   // another turn header or an Outcome heading. Otherwise it's a legitimate
