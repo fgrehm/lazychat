@@ -29,3 +29,4 @@ Write notes here as they surface. Each one is either a bug (fix in-branch) or a 
 - `zellij run --close-on-exit --stacked --name lazyreply -- lazychat reply .lazyai/... --as human`
 - Sometimes we need context from prior rounds, quoting just the previous round is not always useful...
 - We should instruct models to not append `---` on their replies, makes it harder to scan the file
+- Even Opus 4.7 is getting confused about `--since`, might need to refine wording

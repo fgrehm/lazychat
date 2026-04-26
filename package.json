@@ -1,6 +1,6 @@
 {
   "name": "lazychat",
-  "version": "0.0.3-dev",
+  "version": "0.0.3",
   "description": "File-based async discussion protocol, as a TypeScript library and CLI.",
   "repository": {
     "type": "git",
