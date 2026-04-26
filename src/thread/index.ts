@@ -202,6 +202,10 @@ export async function newThread(
   topic: string,
   context: string,
 ): Promise<void> {
+  if (!topic.trim()) throw new Error("topic must not be empty");
+  if (/[\r\n]/.test(topic)) throw new Error("topic must be a single line");
+  if (context.includes("-->"))
+    throw new Error("context must not contain '-->'");
   await mkdir(dirname(path), { recursive: true });
   const comment = context.includes("\n")
     ? `<!--\n${context}\n-->`
