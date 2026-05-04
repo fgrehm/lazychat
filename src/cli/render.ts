@@ -1,9 +1,9 @@
 import { Marked } from "marked";
 import { markedTerminal } from "marked-terminal";
 
-// marked-terminal's renderer signature is loose against marked's strict
-// Renderer type; the cast keeps the well-known integration working without
-// fighting third-party typings.
+// @types/marked-terminal types markedTerminal() as TerminalRenderer, but
+// marked.use() expects a MarkedExtension. Runtime works; the published
+// .d.ts files just don't agree on the integration shape.
 const marked = new Marked().use(markedTerminal() as never);
 
 export function renderMarkdown(text: string): string {
