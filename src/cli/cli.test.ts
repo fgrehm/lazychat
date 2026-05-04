@@ -857,6 +857,17 @@ describe("lazychat list --json", () => {
   });
 });
 
+// ── --version ─────────────────────────────────────────────────────────────────
+
+describe("lazychat --version", () => {
+  test("prints the version from package.json", async () => {
+    const pkg = await Bun.file(join(ROOT, "package.json")).json();
+    const { stdout, exitCode } = await run(["--version"]);
+    expect(exitCode).toBe(0);
+    expect(stdout.trim()).toBe(pkg.version);
+  });
+});
+
 // ── skill ─────────────────────────────────────────────────────────────────────
 
 describe("lazychat skill", () => {

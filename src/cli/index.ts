@@ -4,6 +4,7 @@ import { Command, CommanderError, type OptionValues } from "commander";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import pkg from "../../package.json" with { type: "json" };
 import SKILL_CLI from "../../SKILL-CLI.md" with { type: "text" };
 import type { ListFilter } from "../thread/index.ts";
 import {
@@ -390,6 +391,7 @@ async function cmdOnboard(): Promise<void> {
 
 const program = new Command("lazychat")
   .description("File-based async discussion protocol")
+  .version(pkg.version)
   .showSuggestionAfterError();
 
 program
