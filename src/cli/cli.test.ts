@@ -74,10 +74,10 @@ async function writeThread(
 const OPEN_THREAD = `---\nstatus: open\n---\n\n# test-topic\n\n<!-- context -->\n`;
 const CONVERGED_THREAD =
   `---\nstatus: converged\n---\n\n# converged-topic\n\n<!-- context -->\n\n---\n\n` +
-  `## Round 1 (human)\n\nhello\n\n---\n\n## Outcome\n\ndone\n`;
+  `## Turn 1 (human)\n\nhello\n\n---\n\n## Outcome\n\ndone\n`;
 const THREAD_WITH_TURNS =
   `---\nstatus: open\n---\n\n# test\n\n<!-- ctx -->\n\n---\n\n` +
-  `## Round 1 (human)\n\nhello\n\n---\n\n## Round 2 (agent) - @claude-opus-4-5\n\nworld\n`;
+  `## Turn 1 (human)\n\nhello\n\n---\n\n## Turn 2 (agent) - @claude-opus-4-5\n\nworld\n`;
 
 // ── new ──────────────────────────────────────────────────────────────────────
 
@@ -161,7 +161,7 @@ describe("lazychat reply", () => {
       );
       expect(exitCode).toBe(0);
       const content = await Bun.file(path).text();
-      expect(content).toContain("## Round 1 (agent) - @claude-opus-4-5");
+      expect(content).toContain("## Turn 1 (agent) - @claude-opus-4-5");
     } finally {
       await rm(dir, { recursive: true });
     }
@@ -179,7 +179,7 @@ describe("lazychat reply", () => {
       const content = await Bun.file(path).text();
       // Human turn header line should end right after the role parens, no
       // attribution segment of any separator flavor.
-      expect(content).toMatch(/^## Round 1 \(human\)\s*$/m);
+      expect(content).toMatch(/^## Turn 1 \(human\)\s*$/m);
     } finally {
       await rm(dir, { recursive: true });
     }
@@ -194,7 +194,7 @@ describe("lazychat reply", () => {
         { cwd: dir },
       );
       expect(exitCode).toBe(0);
-      expect(stdout).toContain("appended round 1 (human) to");
+      expect(stdout).toContain("appended turn 1 (human) to");
     } finally {
       await rm(dir, { recursive: true });
     }
@@ -625,7 +625,7 @@ describe("lazychat show", () => {
     }
   });
 
-  test("--round N prints turns at that round joined by --- separators", async () => {
+  test("--turn N prints the turn with id N", async () => {
     const dir = await tempDir();
     try {
       const path = await writeThread(
@@ -633,11 +633,11 @@ describe("lazychat show", () => {
         "2026-01-01T0000-t.md",
         THREAD_WITH_TURNS,
       );
-      const { stdout, exitCode } = await run(["show", path, "--round", "1"], {
+      const { stdout, exitCode } = await run(["show", path, "--turn", "1"], {
         cwd: dir,
       });
       expect(exitCode).toBe(0);
-      expect(stdout).toContain("## Round 1 (human)");
+      expect(stdout).toContain("## Turn 1 (human)");
       expect(stdout).toContain("hello");
       expect(stdout).not.toContain("world");
     } finally {
@@ -645,7 +645,7 @@ describe("lazychat show", () => {
     }
   });
 
-  test("--last prints the last turn in file order", async () => {
+  test("--last with no value prints the single most recent turn", async () => {
     const dir = await tempDir();
     try {
       const path = await writeThread(
@@ -657,7 +657,7 @@ describe("lazychat show", () => {
         cwd: dir,
       });
       expect(exitCode).toBe(0);
-      expect(stdout).toContain("## Round 2 (agent)");
+      expect(stdout).toContain("## Turn 2 (agent)");
       expect(stdout).toContain("world");
       expect(stdout).not.toContain("hello");
     } finally {
@@ -665,7 +665,7 @@ describe("lazychat show", () => {
     }
   });
 
-  test("--since N prints turns where round >= N (inclusive)", async () => {
+  test("--last N prints the trailing N turns", async () => {
     const dir = await tempDir();
     try {
       const path = await writeThread(
@@ -673,18 +673,18 @@ describe("lazychat show", () => {
         "2026-01-01T0000-t.md",
         THREAD_WITH_TURNS,
       );
-      const { stdout, exitCode } = await run(["show", path, "--since", "2"], {
+      const { stdout, exitCode } = await run(["show", path, "--last", "2"], {
         cwd: dir,
       });
       expect(exitCode).toBe(0);
-      expect(stdout).toContain("## Round 2");
-      expect(stdout).not.toContain("## Round 1");
+      expect(stdout).toContain("## Turn 1 (human)");
+      expect(stdout).toContain("## Turn 2 (agent)");
     } finally {
       await rm(dir, { recursive: true });
     }
   });
 
-  test("--since N includes same-round turns after the agent wrote them", async () => {
+  test("--last N caps at the available trailing turns", async () => {
     const dir = await tempDir();
     try {
       const path = await writeThread(
@@ -692,18 +692,18 @@ describe("lazychat show", () => {
         "2026-01-01T0000-t.md",
         THREAD_WITH_TURNS,
       );
-      const { stdout, exitCode } = await run(["show", path, "--since", "1"], {
+      const { stdout, exitCode } = await run(["show", path, "--last", "10"], {
         cwd: dir,
       });
       expect(exitCode).toBe(0);
-      expect(stdout).toContain("## Round 1 (human)");
-      expect(stdout).toContain("## Round 2");
+      expect(stdout).toContain("## Turn 1 (human)");
+      expect(stdout).toContain("## Turn 2 (agent)");
     } finally {
       await rm(dir, { recursive: true });
     }
   });
 
-  test("errors when more than one selector flag is given", async () => {
+  test("errors when both --turn and --last are given", async () => {
     const dir = await tempDir();
     try {
       const path = await writeThread(
@@ -712,7 +712,7 @@ describe("lazychat show", () => {
         THREAD_WITH_TURNS,
       );
       const { stderr, exitCode } = await run(
-        ["show", path, "--last", "--since", "1"],
+        ["show", path, "--turn", "1", "--last"],
         { cwd: dir },
       );
       expect(exitCode).toBe(2);
@@ -722,7 +722,7 @@ describe("lazychat show", () => {
     }
   });
 
-  test("errors with exit 2 when --round is not a positive integer", async () => {
+  test("errors with exit 2 when --turn is not a positive integer", async () => {
     const dir = await tempDir();
     try {
       const path = await writeThread(
@@ -731,18 +731,18 @@ describe("lazychat show", () => {
         THREAD_WITH_TURNS,
       );
       for (const bad of ["foo", "1.5", "1.0", "0", "-3", "1e2", "0x10", "01"]) {
-        const { stderr, exitCode } = await run(["show", path, "--round", bad], {
+        const { stderr, exitCode } = await run(["show", path, "--turn", bad], {
           cwd: dir,
         });
         expect(exitCode).toBe(2);
-        expect(stderr).toContain("--round requires a positive integer");
+        expect(stderr).toContain("--turn requires a positive integer");
       }
     } finally {
       await rm(dir, { recursive: true });
     }
   });
 
-  test("errors with exit 2 when --since is not a positive integer", async () => {
+  test("errors with exit 2 when --last value is not a positive integer", async () => {
     const dir = await tempDir();
     try {
       const path = await writeThread(
@@ -750,11 +750,11 @@ describe("lazychat show", () => {
         "2026-01-01T0000-t.md",
         THREAD_WITH_TURNS,
       );
-      const { stderr, exitCode } = await run(["show", path, "--since", "bar"], {
+      const { stderr, exitCode } = await run(["show", path, "--last", "bar"], {
         cwd: dir,
       });
       expect(exitCode).toBe(2);
-      expect(stderr).toContain("--since requires a positive integer");
+      expect(stderr).toContain("--last requires a positive integer");
     } finally {
       await rm(dir, { recursive: true });
     }
@@ -764,35 +764,35 @@ describe("lazychat show", () => {
 // ── status ────────────────────────────────────────────────────────────────────
 
 describe("lazychat status", () => {
-  test("prints raw frontmatter, rounds count, and updated timestamp", async () => {
+  test("prints raw frontmatter, turns count, and updated timestamp", async () => {
     const dir = await tempDir();
     try {
-      const thread = `---\nstatus: open\n---\n\n# test\n\n<!-- ctx -->\n\n---\n\n## Round 1 (human)\n\nhello\n`;
+      const thread = `---\nstatus: open\n---\n\n# test\n\n<!-- ctx -->\n\n---\n\n## Turn 1 (human)\n\nhello\n`;
       const path = await writeThread(dir, "2026-01-01T0000-t.md", thread);
       const { stdout, exitCode } = await run(["status", path], { cwd: dir });
       expect(exitCode).toBe(0);
       expect(stdout).toContain("status: open");
-      expect(stdout).toContain("rounds: 1");
+      expect(stdout).toContain("turns: 1");
       expect(stdout).toMatch(/updated: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
     } finally {
       await rm(dir, { recursive: true });
     }
   });
 
-  test("reports max round number, not parsed turn count", async () => {
+  test("reports max turn id, not parsed turn count", async () => {
     const dir = await tempDir();
     try {
-      // Two Round 2 turns (gap at Round 1): turns.length=2, max round=2.
+      // Two Turn 2 entries (gap at Turn 1): turns.length=2, max id=2.
       const thread =
         `---\nstatus: open\n---\n\n# gap-test\n\n<!-- ctx -->\n\n---\n\n` +
-        `## Round 2 (agent) - @x\n\nfirst\n\n---\n\n## Round 2 (human)\n\nsecond\n`;
+        `## Turn 2 (agent) - @x\n\nfirst\n\n---\n\n## Turn 2 (human)\n\nsecond\n`;
       const path = await writeThread(dir, "2026-01-01T0000-t.md", thread);
       const { stdout } = await run(["status", path], { cwd: dir });
-      expect(stdout).toContain("rounds: 2");
+      expect(stdout).toContain("turns: 2");
       const { stdout: json } = await run(["status", path, "--json"], {
         cwd: dir,
       });
-      expect(JSON.parse(json).rounds).toBe(2);
+      expect(JSON.parse(json).turns).toBe(2);
     } finally {
       await rm(dir, { recursive: true });
     }
@@ -801,7 +801,7 @@ describe("lazychat status", () => {
   test("--json outputs a valid JSON object", async () => {
     const dir = await tempDir();
     try {
-      const thread = `---\nstatus: open\n---\n\n# my-topic\n\n<!-- ctx -->\n\n---\n\n## Round 1 (human)\n\nhello\n`;
+      const thread = `---\nstatus: open\n---\n\n# my-topic\n\n<!-- ctx -->\n\n---\n\n## Turn 1 (human)\n\nhello\n`;
       const path = await writeThread(dir, "2026-01-01T0000-t.md", thread);
       const { stdout, exitCode } = await run(["status", path, "--json"], {
         cwd: dir,
@@ -810,7 +810,7 @@ describe("lazychat status", () => {
       const obj = JSON.parse(stdout);
       expect(obj.status).toBe("open");
       expect(obj.topic).toBe("my-topic");
-      expect(obj.rounds).toBe(1);
+      expect(obj.turns).toBe(1);
       expect(typeof obj.updatedAt).toBe("string");
     } finally {
       await rm(dir, { recursive: true });
@@ -838,7 +838,7 @@ describe("lazychat list --json", () => {
       expect(typeof item.path).toBe("string");
       expect(["open", "converged"]).toContain(item.status);
       expect(typeof item.topic).toBe("string");
-      expect(typeof item.rounds).toBe("number");
+      expect(typeof item.turns).toBe("number");
       expect(typeof item.updatedAt).toBe("string");
     } finally {
       await rm(dir, { recursive: true });

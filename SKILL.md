@@ -11,12 +11,12 @@ The key words MUST, MUST NOT, SHOULD, and MAY in this document are to be interpr
 
 ## How to operate it
 
-1. **Confirm scope and context.** Before creating the file, you MUST have: the target artifact (what we want to ship), the core question or decision, and enough context to write round 1 without guessing. The prior chat counts as context; use what the human has already told you. If something needed is missing, ask in chat before creating the file.
+1. **Confirm scope and context.** Before creating the file, you MUST have the target artifact (what we want to ship), the core question or decision, and enough context to write the first turn without guessing. The prior chat counts as context, so use what the human has already told you. If something needed is missing, ask in chat before creating the file.
 2. **Create the file** at `.lazyai/YYYY-MM-DDTHHMM-<topic-slug>.md` in the current working tree, using the template below. Fill in the topic and the one-paragraph context comment.
 3. **Write questions, proposals, or drafts** in the file. Freeform. Number points, quote options, include diffs, whatever serves clarity.
-4. **Stop and tell the user in chat** that the file is ready at `<path>`. You MUST NOT keep writing past the current round.
+4. **Stop and tell the user in chat** that the file is ready at `<path>`. You MUST NOT keep writing past your current turn.
 5. **Wait.** The user may reply in minutes, hours, or days. Do not nudge.
-6. **Re-read the file end-to-end** when the user signals they have replied or when resuming a thread. Do not skim. The file is the source of truth. If the next move isn't clear after re-reading, ask in chat or write a short refresher round stating where you think the thread stands; do not guess.
+6. **Re-read the file end-to-end** when the user signals they have replied or when resuming a thread. Do not skim. The file is the source of truth. If the next move isn't clear after re-reading, ask in chat or write a short refresher turn stating where you think the thread stands; do not guess.
 7. **Continue** in the same file. When the discussion has converged, write a final `## Outcome` section summarizing the decisions, flip frontmatter `status` to `converged`, and apply the outcome to the canonical artifact. The discussion file stays as the record.
 
 ## Template
@@ -39,7 +39,7 @@ status: open
 
 ## Conventions
 
-- **Turn headers.** Each turn MUST start with `## Round N (agent)` or `## Round N (human)`. Agent turns SHOULD append `- @<model-id>` for attribution. If the model id is omitted, tooling may record the turn as `@unknown`.
+- **Turn headers.** Each turn MUST start with `## Turn N (agent)` or `## Turn N (human)`, where N is a monotonic id counted across the whole thread (not paired by role). Two `(agent)` turns in a row are legal: the next id is just `max + 1`. Agent turns SHOULD append `- @<model-id>` for attribution. If the model id is omitted, tooling may record the turn as `@unknown`.
 - **Append, don't insert.** New turns MUST be added at the end of the file. Do not write above existing turns or at the top of the file.
 - **No turn separators in your body.** The `---` line between turns is inserted for you. Do not write `---` separators inside a turn body; they make the file harder to scan.
 - **Quote-and-reply.** When replying to specific lines, you SHOULD use `>` to quote the line or block, then write your reply below it.

@@ -10,7 +10,7 @@ import {
   appendTurn,
   converge,
   listThreads,
-  maxRound,
+  maxTurn,
   newThread,
   parse,
   slugifyTopic,
@@ -42,14 +42,13 @@ Commands:
   list [--status open|converged|all] [--json]
       List threads in .lazyai/, most recent first. Default: open.
 
-  show <file> [--round N | --last | --since N]
+  show <file> [--turn N | --last [N]]
       Print thread content. No flag prints the whole file.
-      --round N   print all turns at round N.
-      --last      print the last turn.
-      --since N   print turns at round N and later. N = the round you last wrote.
+      --turn N    print the turn with id N.
+      --last [N]  print the last N turns (default 1).
 
   status <file> [--json]
-      Print frontmatter, round count, and last-updated timestamp.
+      Print frontmatter, turn count, and last-updated timestamp.
 
   onboard
       Print this block and active threads.
@@ -164,6 +163,10 @@ async function cmdNew(rawSlug: string, opts: OptionValues): Promise<void> {
   const path = timestampedPath(LAZYAI_DIR, slug, new Date());
   await newThread(path, slug, body);
   process.stdout.write(path + "\n");
+  process.stderr.write(
+    `Thread is ready at ${path}. Write the first turn with:\n` +
+      `  lazychat reply ${path} --as agent --model <id> --stdin\n`,
+  );
 }
 
 async function resolveBody(opts: OptionValues): Promise<string> {
@@ -222,8 +225,12 @@ async function cmdReply(file: string, opts: OptionValues): Promise<void> {
   }
 
   const model = (opts["model"] as string | undefined) ?? "";
-  const round = await appendTurn(file, role, model, body);
-  process.stdout.write(`appended round ${round} (${role}) to ${file}\n`);
+  const id = await appendTurn(file, role, model, body);
+  const otherSide = role === "agent" ? "human" : "agent";
+  process.stdout.write(
+    `appended turn ${id} (${role}) to ${file}\n` +
+      `Tell the ${otherSide} to catch up with: lazychat show ${file} --last 1\n`,
+  );
 }
 
 async function cmdOpen(file: string): Promise<void> {
@@ -254,7 +261,7 @@ async function cmdList(opts: OptionValues): Promise<void> {
           path: s.path,
           status: s.status,
           topic: s.topic,
-          rounds: s.rounds,
+          turns: s.turns,
           updatedAt: s.updatedAt.toISOString(),
         })),
         null,
@@ -269,7 +276,7 @@ async function cmdList(opts: OptionValues): Promise<void> {
       summaries.map((s) => [
         s.status,
         s.path,
-        `${s.rounds} rounds`,
+        `${s.turns} turns`,
         fmtDate(s.updatedAt),
         s.topic,
       ]),
@@ -278,20 +285,17 @@ async function cmdList(opts: OptionValues): Promise<void> {
 }
 
 async function cmdShow(file: string, opts: OptionValues): Promise<void> {
-  const roundOpt = opts["round"] as string | undefined;
-  const lastOpt = opts["last"] as boolean | undefined;
-  const sinceOpt = opts["since"] as string | undefined;
+  const turnOpt = opts["turn"] as string | undefined;
+  // --last is variadic: boolean true (no value), or a string when a count is
+  // passed. undefined means the flag was not given.
+  const lastOpt = opts["last"] as string | boolean | undefined;
 
-  const numSelectors = [
-    roundOpt !== undefined,
-    lastOpt === true,
-    sinceOpt !== undefined,
-  ].filter(Boolean).length;
+  const numSelectors = [turnOpt !== undefined, lastOpt !== undefined].filter(
+    Boolean,
+  ).length;
 
   if (numSelectors > 1) {
-    process.stderr.write(
-      "error: --round, --last, and --since are mutually exclusive\n",
-    );
+    process.stderr.write("error: --turn and --last are mutually exclusive\n");
     process.exit(2);
   }
 
@@ -313,15 +317,13 @@ async function cmdShow(file: string, opts: OptionValues): Promise<void> {
 
   const thread = await parse(file);
   let selected;
-  if (roundOpt !== undefined) {
-    const n = parsePositiveInt(roundOpt, "--round");
-    selected = thread.turns.filter((t) => t.round === n);
-  } else if (lastOpt) {
-    const last = thread.turns.at(-1);
-    selected = last ? [last] : [];
+  if (turnOpt !== undefined) {
+    const n = parsePositiveInt(turnOpt, "--turn");
+    selected = thread.turns.filter((t) => t.id === n);
   } else {
-    const n = parsePositiveInt(sinceOpt!, "--since");
-    selected = thread.turns.filter((t) => t.round >= n);
+    const n =
+      lastOpt === true ? 1 : parsePositiveInt(lastOpt as string, "--last");
+    selected = thread.turns.slice(-n);
   }
 
   if (selected.length > 0) {
@@ -333,14 +335,14 @@ async function cmdShow(file: string, opts: OptionValues): Promise<void> {
 
 async function cmdStatus(file: string, opts: OptionValues): Promise<void> {
   const thread = await parse(file);
-  const rounds = maxRound(thread.turns);
+  const turns = maxTurn(thread.turns);
   if (opts["json"]) {
     process.stdout.write(
       JSON.stringify(
         {
           status: thread.status,
           topic: thread.topic,
-          rounds,
+          turns,
           updatedAt: thread.updatedAt.toISOString(),
         },
         null,
@@ -352,7 +354,7 @@ async function cmdStatus(file: string, opts: OptionValues): Promise<void> {
   process.stdout.write(
     [
       thread.frontmatterRaw.trim(),
-      `rounds: ${rounds}`,
+      `turns: ${turns}`,
       `updated: ${fmtDate(thread.updatedAt, true)}`,
     ].join("\n") + "\n",
   );
@@ -429,17 +431,13 @@ program
 program
   .command("show <file>")
   .description("Print thread content. No flag prints the whole file.")
-  .option("--round <n>", "Print turns at round N")
-  .option("--last", "Print the last turn")
-  .option(
-    "--since <n>",
-    "Print turns at round N and later. Pass the round you last wrote for catch-up.",
-  )
+  .option("--turn <n>", "Print the turn with id N")
+  .option("--last [n]", "Print the last N turns (default 1)")
   .action(cmdShow);
 
 program
   .command("status <file>")
-  .description("Print frontmatter, round count, and last-updated timestamp.")
+  .description("Print frontmatter, turn count, and last-updated timestamp.")
   .option("--json", "Output as JSON object")
   .action(cmdStatus);
 

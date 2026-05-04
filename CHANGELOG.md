@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## Unreleased
+
+### Changed
+
+- **Turn ids replace round numbers.** Headers are now `## Turn N (role)` with N monotonic across the whole thread (not paired by role). Two `(agent)` turns in a row are legal. Asymmetric threads no longer require a placeholder turn to advance. CLI `status`/`list` report `turns` instead of `rounds` (in both text and JSON output).
+- `lazychat show --since N` is gone. `--last [N]` (default 1) is the new catch-up flag and accepts an optional count, so `--last 3` prints the trailing three turns. `--round N` was renamed to `--turn N`.
+- `lazychat reply` success message is now role-aware: prints the appended turn id and a one-line `lazychat show <file> --last 1` hint targeted at the other side.
+- `lazychat new` prints a "Thread is ready" hint to stderr alongside the path on stdout, suggesting the next `lazychat reply` invocation.
+- Parser is strict: only `## Turn N (role)` headers are recognised. Existing files with `## Round N (role)` headers stay on disk as plain markdown but stop parsing as threads. No migration is provided.
+
 ## v0.0.3 - 2026-04-26
 
 ### Added

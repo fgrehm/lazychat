@@ -91,9 +91,9 @@ lazychat converge <file> --stdin | --body <str>
 Append an Outcome section and mark the thread converged. Exactly one of `--stdin` or `--body` must be given.
 
 ```
-lazychat show <file> [--round N | --last | --since N]
+lazychat show <file> [--turn N | --last [N]]
 ```
-Print thread content. No flag prints the whole file. `--since N` prints all turns at round N and later (inclusive). Useful for an agent to re-read its own turn at round N plus whatever the human added in response.
+Print thread content. No flag prints the whole file. `--turn N` prints the turn with id N. `--last [N]` prints the trailing N turns (default 1) — useful catch-up after the other side has written.
 
 ```
 lazychat list [--status open|converged|all] [--json]
@@ -103,7 +103,7 @@ List threads in `.lazyai/`, most recent first. Defaults to open threads.
 ```
 lazychat status <file> [--json]
 ```
-Print frontmatter, round count, and last-updated timestamp.
+Print frontmatter, turn count, and last-updated timestamp.
 
 ```
 lazychat onboard

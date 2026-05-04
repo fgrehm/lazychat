@@ -13,7 +13,7 @@ export type Role = "agent" | "human";
 export type Status = "open" | "converged";
 
 export interface Turn {
-  round: number;
+  id: number;
   role: Role;
   model: string;
   body: string;
@@ -34,7 +34,7 @@ export interface Summary {
   path: string;
   status: Status;
   topic: string;
-  rounds: number;
+  turns: number;
   updatedAt: Date;
 }
 
@@ -42,9 +42,9 @@ export type ListFilter = "open" | "converged" | "all";
 
 // Pure core
 
-export function maxRound(turns: Turn[]): number {
+export function maxTurn(turns: Turn[]): number {
   let max = 0;
-  for (const t of turns) if (t.round > max) max = t.round;
+  for (const t of turns) if (t.id > max) max = t.id;
   return max;
 }
 
@@ -61,12 +61,8 @@ export function timestampedPath(dir: string, slug: string, now: Date): string {
   return join(dir, `${ts}-${slug}.md`);
 }
 
-export function nextRound(turns: Turn[], role: Role): number {
-  if (turns.length === 0) return 1;
-  const max = maxRound(turns);
-  if (role === "agent") return max + 1;
-  const humanAtMax = turns.some((t) => t.round === max && t.role === "human");
-  return humanAtMax ? max + 1 : max;
+export function nextTurnId(turns: Turn[]): number {
+  return maxTurn(turns) + 1;
 }
 
 const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
@@ -76,7 +72,7 @@ const H1_RE = /^# (.+)$/m;
 // en-dash (U+2013) and em-dash (U+2014) so older threads and hand-typed
 // turns still parse cleanly. Tolerates annotations like (human, via chat).
 const TURN_HEADER_RE =
-  /^##\s+Round\s+(\d+)\s+\((agent|human)(?:,[^)]*)?\)(?:\s*[-–—]\s*@(\S+))?\s*$/;
+  /^##\s+Turn\s+(\d+)\s+\((agent|human)(?:,[^)]*)?\)(?:\s*[-–—]\s*@(\S+))?\s*$/;
 const OUTCOME_RE = /^##\s+Outcome\s*$/m;
 
 export function parseBytes(path: string, data: string): Thread {
@@ -142,7 +138,7 @@ export function parseBytes(path: string, data: string): Thread {
     const m = lines[i].match(TURN_HEADER_RE);
     if (!m) continue;
 
-    const round = parseInt(m[1], 10);
+    const id = parseInt(m[1], 10);
     const role = m[2] as Role;
     const model = m[3] ?? "";
     const headerLine = lines[i];
@@ -163,7 +159,7 @@ export function parseBytes(path: string, data: string): Thread {
     while (bs < be && bodyLines[bs] === "") bs++;
     while (be > bs && bodyLines[be - 1] === "") be--;
     turns.push({
-      round,
+      id,
       role,
       model,
       body: bodyLines.slice(bs, be).join("\n"),
@@ -246,17 +242,17 @@ export async function appendTurn(
     throw new Error(`${path}: thread is converged; cannot append turn`);
   }
 
-  const round = nextRound(thread.turns, role);
+  const id = nextTurnId(thread.turns);
   const effectiveModel = role === "agent" ? model || "unknown" : "";
   const attr = effectiveModel ? ` - @${effectiveModel}` : "";
-  const header = `## Round ${round} (${role})${attr}`;
+  const header = `## Turn ${id} (${role})${attr}`;
 
   await atomicWrite(
     path,
     data.replace(/\n+$/, "") +
       `\n\n---\n\n${header}\n\n${body.replace(/\n+$/, "")}\n`,
   );
-  return round;
+  return id;
 }
 
 export async function converge(path: string, body: string): Promise<void> {
@@ -309,7 +305,7 @@ export async function listThreads(
             path: filePath,
             status: thread.status,
             topic: thread.topic,
-            rounds: maxRound(thread.turns),
+            turns: maxTurn(thread.turns),
             updatedAt: mtime,
           };
         } catch {
