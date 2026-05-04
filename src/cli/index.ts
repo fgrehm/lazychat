@@ -290,16 +290,12 @@ async function cmdShow(file: string, opts: OptionValues): Promise<void> {
   // passed. undefined means the flag was not given.
   const lastOpt = opts["last"] as string | boolean | undefined;
 
-  const numSelectors = [turnOpt !== undefined, lastOpt !== undefined].filter(
-    Boolean,
-  ).length;
-
-  if (numSelectors > 1) {
+  if (turnOpt !== undefined && lastOpt !== undefined) {
     process.stderr.write("error: --turn and --last are mutually exclusive\n");
     process.exit(2);
   }
 
-  if (numSelectors === 0) {
+  if (turnOpt === undefined && lastOpt === undefined) {
     process.stdout.write(await Bun.file(file).text());
     return;
   }
