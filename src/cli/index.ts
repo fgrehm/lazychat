@@ -46,7 +46,7 @@ Commands:
 
   show <file> [--turn N | --last [N]]
       Print thread content. No flag prints the whole file.
-      --turn N    print the turn with id N.
+      --turn N    print the turn(s) with id N (duplicate ids are tolerated).
       --last [N]  print the last N turns (default 1).
 
   status <file> [--json]
@@ -435,7 +435,10 @@ program
 program
   .command("show <file>")
   .description("Print thread content. No flag prints the whole file.")
-  .option("--turn <n>", "Print the turn with id N")
+  .option(
+    "--turn <n>",
+    "Print the turn(s) with id N (duplicate ids are tolerated)",
+  )
   .option("--last [n]", "Print the last N turns (default 1)")
   .action(cmdShow);
 

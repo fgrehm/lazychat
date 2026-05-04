@@ -93,7 +93,7 @@ Append an Outcome section and mark the thread converged. Exactly one of `--stdin
 ```
 lazychat show <file> [--turn N | --last [N]]
 ```
-Print thread content. No flag prints the whole file. `--turn N` prints the turn with id N. `--last [N]` prints the trailing N turns (default 1) — useful catch-up after the other side has written.
+Print thread content. No flag prints the whole file. `--turn N` prints the turn(s) with id N (the parser tolerates duplicate ids). `--last [N]` prints the trailing N turns (default 1) — useful catch-up after the other side has written.
 
 ```
 lazychat list [--status open|converged|all] [--json]

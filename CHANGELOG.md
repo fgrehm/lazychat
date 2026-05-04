@@ -2,14 +2,10 @@
 
 ## Unreleased
 
-### Changed
-
-- `examples/2026-04-23T1042-ts-port-open-questions.md`: turn headers migrated from `## Round N (role)` to `## Turn N (role)`, ids renumbered monotonically (1–6) so the file parses under the v0.0.4 strict regex. Body text untouched.
-- `examples/2026-04-16T1811-cli-packaging.md` and `examples/2026-04-21T1034-templates-and-skill.md`: moved to `examples/legacy/` with a README. They predate the canonical turn-header format and don't parse under any version of the parser.
-
 ### Added
 
-- **Pretty markdown rendering on `show` when stdout is a TTY.** `lazychat show` now detects `process.stdout.isTTY` and renders through [marked-terminal](https://github.com/mikaelbr/marked-terminal) for human readers (colors, code highlighting). On a pipe or redirect the output stays raw markdown so agents and tooling get a deterministic, parseable stream. No new flag, no new verb. Source: `~/projects/oss/lazyai/.lazyai/2026-04-30T2122-chat-view-renderer.md`.
+- **Pretty markdown rendering on `show` when stdout is a TTY.** `lazychat show` now detects `process.stdout.isTTY` and renders through [marked-terminal](https://github.com/mikaelbr/marked-terminal) for human readers (colors, code highlighting). On a pipe or redirect the output stays raw markdown so agents and tooling get a deterministic, parseable stream. No new flag, no new verb.
+- `lazychat --version` flag, sourced from `package.json`.
 
 ### Changed
 
@@ -18,6 +14,8 @@
 - `lazychat reply` success message is now role-aware: prints the appended turn id and a one-line `lazychat show <file> --last 1` hint targeted at the other side.
 - `lazychat new` prints a "Thread is ready" hint to stderr alongside the path on stdout, suggesting the next `lazychat reply` invocation.
 - Parser is strict: only `## Turn N (role)` headers are recognised. Existing files with `## Round N (role)` headers still parse (frontmatter and topic are read normally), but the legacy headers no longer match the turn regex, so `status` and `list` report `turns: 0` and `--turn N`/`--last N` see an empty thread. No migration is provided.
+- `examples/2026-04-23T1042-ts-port-open-questions.md`: turn headers migrated from `## Round N (role)` to `## Turn N (role)`, ids renumbered monotonically (1–6) so the file parses under the v0.0.4 strict regex. Body text untouched.
+- `examples/2026-04-16T1811-cli-packaging.md` and `examples/2026-04-21T1034-templates-and-skill.md`: moved to `examples/legacy/` with a README. They predate the canonical turn-header format and only parse partially (frontmatter and topic), with 0 turns.
 
 ## v0.0.3 - 2026-04-26
 
