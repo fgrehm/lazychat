@@ -40,7 +40,7 @@ The key words MUST, MUST NOT, SHOULD, and MAY in this document are to be interpr
 
 5. **Wait.** The user may reply in minutes, hours, or days. Do not nudge.
 
-6. **Re-read what you need.** If the human just replied to your last turn in this same session, `lazychat show "$FILE" --last 1` is enough. If you are resuming cold (new session, no context) or unsure where the thread stands, re-read end-to-end with `lazychat show "$FILE"`. Do not skim. The file is the source of truth. If the next move is not clear after re-reading, ask in chat or write a short refresher turn; do not guess.
+6. **Re-read what you need.** If the human just replied to your last turn in this same session, `lazychat show "$FILE" --last 1` is enough. If you are resuming cold (new session, no context) or unsure where the thread stands, re-read end-to-end with `lazychat show "$FILE"`. Do not skim. The file is the source of truth. If the next move is not clear after re-reading, ask in chat or write a short refresher turn. Do not guess.
 
    ```bash
    lazychat show "$FILE"             # full file (cold resume)

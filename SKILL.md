@@ -16,7 +16,7 @@ The key words MUST, MUST NOT, SHOULD, and MAY in this document are to be interpr
 3. **Write questions, proposals, or drafts** in the file. Freeform. Number points, quote options, include diffs, whatever serves clarity.
 4. **Stop and tell the user in chat** that the file is ready at `<path>`. You MUST NOT keep writing past your current turn.
 5. **Wait.** The user may reply in minutes, hours, or days. Do not nudge.
-6. **Re-read the file end-to-end** when the user signals they have replied or when resuming a thread. Do not skim. The file is the source of truth. If the next move isn't clear after re-reading, ask in chat or write a short refresher turn stating where you think the thread stands; do not guess.
+6. **Re-read the file end-to-end** when the user signals they have replied or when resuming a thread. Do not skim. The file is the source of truth. If the next move isn't clear after re-reading, ask in chat or write a short refresher turn stating where you think the thread stands. Do not guess.
 7. **Continue** in the same file. When the discussion has converged, write a final `## Outcome` section summarizing the decisions, flip frontmatter `status` to `converged`, and apply the outcome to the canonical artifact. The discussion file stays as the record.
 
 ## Template
