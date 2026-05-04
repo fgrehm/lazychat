@@ -217,6 +217,18 @@ describe("parseBytes", () => {
     expect(th.turns).toHaveLength(0);
   });
 
+  test("rejects 'Turn 0' (id must be a positive integer)", () => {
+    const body = "---\n\n## Turn 0 (human)\n\nbody\n";
+    const th = parseBytes("f.md", threadFile(body));
+    expect(th.turns).toHaveLength(0);
+  });
+
+  test("rejects 'Turn 01' (no leading zeros)", () => {
+    const body = "---\n\n## Turn 01 (human)\n\nbody\n";
+    const th = parseBytes("f.md", threadFile(body));
+    expect(th.turns).toHaveLength(0);
+  });
+
   test("captures agent model attribution after the separator", () => {
     const body = `---\n\n${turnBlock(1, "agent", "claude-opus-4-7")}\n`;
     const th = parseBytes("f.md", threadFile(body));
@@ -549,6 +561,16 @@ describe("appendTurn", () => {
     );
   });
 
+  test("refuses to write to a file with legacy 'Round N (role)' headers", async () => {
+    const path = join(dir, "thread.md");
+    const content =
+      "---\nstatus: open\n---\n\n# slug\n\n<!-- ctx -->\n\n---\n\n## Round 1 (human)\n\nlegacy body\n";
+    await writeFile(path, content);
+    await expect(appendTurn(path, "agent", "m", "reply")).rejects.toThrow(
+      /legacy '## Round N \(role\)' headers/,
+    );
+  });
+
   test("preserves extra frontmatter fields on write", async () => {
     const path = join(dir, "thread.md");
     const content =
@@ -630,6 +652,16 @@ describe("converge", () => {
     await newThread(path, "slug", "ctx");
     await converge(path, "done");
     await expect(converge(path, "again")).rejects.toThrow("already converged");
+  });
+
+  test("refuses to converge a file with legacy 'Round N (role)' headers", async () => {
+    const path = join(dir, "thread.md");
+    const content =
+      "---\nstatus: open\n---\n\n# slug\n\n<!-- ctx -->\n\n---\n\n## Round 1 (human)\n\nlegacy body\n";
+    await writeFile(path, content);
+    await expect(converge(path, "outcome")).rejects.toThrow(
+      /legacy '## Round N \(role\)' headers/,
+    );
   });
 
   test("flips status with arbitrary whitespace (status:open, status:  open)", async () => {

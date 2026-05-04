@@ -71,8 +71,11 @@ const H1_RE = /^# (.+)$/m;
 // Attribution separator is a plain hyphen on write. Parse also accepts
 // en-dash (U+2013) and em-dash (U+2014) so older threads and hand-typed
 // turns still parse cleanly. Tolerates annotations like (human, via chat).
+// Turn ids are positive integers without leading zeros, matching what the
+// CLI selectors (`--turn N`, `--last N`) accept.
 const TURN_HEADER_RE =
-  /^##\s+Turn\s+(\d+)\s+\((agent|human)(?:,[^)]*)?\)(?:\s*[-–—]\s*@(\S+))?\s*$/;
+  /^##\s+Turn\s+([1-9]\d*)\s+\((agent|human)(?:,[^)]*)?\)(?:\s*[-–—]\s*@(\S+))?\s*$/;
+const LEGACY_TURN_HEADER_RE = /^##\s+Round\s+\d+\s+\((agent|human)\b/m;
 const OUTCOME_RE = /^##\s+Outcome\s*$/m;
 
 export function parseBytes(path: string, data: string): Thread {
@@ -229,6 +232,20 @@ export async function newThread(
   }
 }
 
+// Refuse to write to files that still carry legacy `## Round N (role)`
+// headers. Without this check we'd silently produce a hybrid file (legacy
+// rounds at the top, fresh `## Turn 1 (role)` appended at the bottom),
+// which restarts ids and confuses every consumer downstream.
+function assertNoLegacyHeaders(path: string, data: string): void {
+  if (LEGACY_TURN_HEADER_RE.test(data)) {
+    throw new Error(
+      `${path}: file contains legacy '## Round N (role)' headers. ` +
+        `lazychat v0.0.4 does not migrate these. Start a new thread or ` +
+        `manually rewrite the headers to '## Turn N (role)' before appending.`,
+    );
+  }
+}
+
 export async function appendTurn(
   path: string,
   role: Role,
@@ -241,6 +258,7 @@ export async function appendTurn(
   if (thread.status === "converged") {
     throw new Error(`${path}: thread is converged; cannot append turn`);
   }
+  assertNoLegacyHeaders(path, data);
 
   const id = nextTurnId(thread.turns);
   const effectiveModel = role === "agent" ? model || "unknown" : "";
@@ -262,6 +280,7 @@ export async function converge(path: string, body: string): Promise<void> {
   if (thread.status === "converged") {
     throw new Error(`${path}: thread is already converged`);
   }
+  assertNoLegacyHeaders(path, data);
 
   // Flip status only within the frontmatter block. A naive file-wide replace
   // would rewrite a literal `status: open` line that happens to appear inside
