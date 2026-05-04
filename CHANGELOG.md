@@ -17,7 +17,7 @@
 - `lazychat show --since N` is gone. `--last [N]` (default 1) is the new catch-up flag and accepts an optional count, so `--last 3` prints the trailing three turns. `--round N` was renamed to `--turn N`.
 - `lazychat reply` success message is now role-aware: prints the appended turn id and a one-line `lazychat show <file> --last 1` hint targeted at the other side.
 - `lazychat new` prints a "Thread is ready" hint to stderr alongside the path on stdout, suggesting the next `lazychat reply` invocation.
-- Parser is strict: only `## Turn N (role)` headers are recognised. Existing files with `## Round N (role)` headers stay on disk as plain markdown but stop parsing as threads. No migration is provided.
+- Parser is strict: only `## Turn N (role)` headers are recognised. Existing files with `## Round N (role)` headers still parse (frontmatter and topic are read normally), but the legacy headers no longer match the turn regex, so `status` and `list` report `turns: 0` and `--turn N`/`--last N` see an empty thread. No migration is provided.
 
 ## v0.0.3 - 2026-04-26
 

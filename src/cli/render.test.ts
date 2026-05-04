@@ -9,10 +9,19 @@ describe("renderMarkdown", () => {
     expect(out).toContain("body");
   });
 
-  test("transforms input (does not pass markdown through verbatim)", () => {
-    // The exact ANSI bytes depend on the terminal/chalk environment, so this
-    // assertion stays loose: confirm the renderer did *something* (the H1
-    // marker was rewritten, not just echoed).
+  test("does not emit HTML (marked-terminal is wired, default renderer is not)", () => {
+    // Without marked-terminal, marked's default fallback for `# heading` is
+    // `<h1>heading</h1>`. Asserting absence of HTML tags guards the
+    // integration: if the renderer chain breaks and falls back to default,
+    // this test fails loudly instead of silently emitting HTML.
+    const out = renderMarkdown(
+      "# heading\n\n**bold** and *italic*\n\n[link](https://example.com)\n",
+    );
+    expect(out).not.toMatch(/<h1>/);
+    expect(out).not.toMatch(/<\/?(strong|em|a|p)\b/);
+  });
+
+  test("rewrites the H1 marker (does not echo input verbatim)", () => {
     const input = "# heading\n";
     const out = renderMarkdown(input);
     expect(out).not.toBe(input);

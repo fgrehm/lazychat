@@ -11,6 +11,7 @@ These threads predate lazychat's canonical turn-header format
   `## Round N — @model 🤖 · YYYY-MM-DD`, a non-canonical separator that
   never matched the strict parser.
 
-Kept on disk as historical record. They don't parse as threads under
-any version of the lazychat parser, including the v0.0.4 strict regex.
-For a current-format example see `../2026-04-23T1042-ts-port-open-questions.md`.
+Kept on disk as historical record. The frontmatter and topic still
+parse, but their non-canonical headers don't match the turn regex
+(any version, including v0.0.4 strict), so they report 0 turns. For
+a current-format example see `../2026-04-23T1042-ts-port-open-questions.md`.
