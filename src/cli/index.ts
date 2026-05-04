@@ -16,6 +16,7 @@ import {
   slugifyTopic,
   timestampedPath,
 } from "../thread/index.ts";
+import { renderMarkdown } from "./render.ts";
 
 const LAZYAI_DIR = ".lazyai";
 
@@ -295,8 +296,15 @@ async function cmdShow(file: string, opts: OptionValues): Promise<void> {
     process.exit(2);
   }
 
+  // On a TTY, render through marked-terminal for human readers (colors,
+  // code highlighting). On a pipe/redirect, emit raw markdown so agents and
+  // tooling get a deterministic, parseable stream.
+  const emit = (text: string) => {
+    process.stdout.write(process.stdout.isTTY ? renderMarkdown(text) : text);
+  };
+
   if (turnOpt === undefined && lastOpt === undefined) {
-    process.stdout.write(await Bun.file(file).text());
+    emit(await Bun.file(file).text());
     return;
   }
 
@@ -323,9 +331,7 @@ async function cmdShow(file: string, opts: OptionValues): Promise<void> {
   }
 
   if (selected.length > 0) {
-    process.stdout.write(
-      selected.map((t) => t.raw.trimEnd()).join("\n\n---\n\n") + "\n",
-    );
+    emit(selected.map((t) => t.raw.trimEnd()).join("\n\n---\n\n") + "\n");
   }
 }
 

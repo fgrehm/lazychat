@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- **Pretty markdown rendering on `show` when stdout is a TTY.** `lazychat show` now detects `process.stdout.isTTY` and renders through [marked-terminal](https://github.com/mikaelbr/marked-terminal) for human readers (colors, code highlighting). On a pipe or redirect the output stays raw markdown so agents and tooling get a deterministic, parseable stream. No new flag, no new verb. Source: `~/projects/oss/lazyai/.lazyai/2026-04-30T2122-chat-view-renderer.md`.
+
 ### Changed
 
 - **Turn ids replace round numbers.** Headers are now `## Turn N (role)` with N monotonic across the whole thread (not paired by role). Two `(agent)` turns in a row are legal. Asymmetric threads no longer require a placeholder turn to advance. CLI `status`/`list` report `turns` instead of `rounds` (in both text and JSON output).
