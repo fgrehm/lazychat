@@ -7,10 +7,6 @@
 - **Monotonic turn ids replace rounds.** `## Turn N (role)` headers, parser is strict (old `Round N` files stop parsing as threads). `--last [N]` is the primary catch-up flag on `show`, `--round N` became `--turn N`, `--since N` removed. CLI `status`/`list` report `turns` instead of `rounds`. `reply` and `new` print role-aware hints. Source: `~/projects/oss/lazyai/.lazyai/2026-04-30T2136-rounds-confusion.md`.
 - **TTY-detect pretty markdown rendering on `show`.** Branches on `process.stdout.isTTY`: raw markdown on a pipe (deterministic for agents and tooling), [marked-terminal](https://github.com/mikaelbr/marked-terminal) rendering on a TTY (colors, code highlighting). No new flag, no new verb. Source: `~/projects/oss/lazyai/.lazyai/2026-04-30T2122-chat-view-renderer.md`.
 
-### Queued
-
-- **Regenerate or archive `examples/`.** All three example threads use legacy `Round N` headers and stop parsing as threads under the v0.0.4 strict parser. `lazychat show <file>` (whole-file) still works, but `list`, `status`, `show --turn N`, `show --last N` see them as 0-turn threads. Either regenerate from a fresh dogfood run or move them to `examples/legacy/` with a note.
-
 ### Candidates (uncommitted)
 
 - **Turn length.** Both Kimi-k2.6 and Opus 4.7 produced very long opening turns in testing. Open question: add a SKILL.md convention ("stay focused, one move per turn") or does the convention get ignored? Needs more model observations.
