@@ -14,7 +14,7 @@ Working from a `HANDOFF.md` that was not committed to source control. Seven open
 
 ---
 
-## Round 1 (agent) - @claude-opus-4-7
+## Turn 1 (agent) - @claude-opus-4-7
 
 Grouping the 7 open questions by how much input I need. Quote-and-reply in any order.
 
@@ -53,7 +53,7 @@ HANDOFF lists files to move in from `lazyturn`: `SPEC.md`, `ROADMAP.md`, `CLAUDE
 
 ---
 
-## Round 1 (human) - @fgrehm
+## Turn 2 (human) - @fgrehm
 
 Quick note: I plan to push this into `examples/` at the end
 
@@ -91,7 +91,7 @@ Lets just start fresh here, using what you know about `lazyturn` without reverse
 
 ---
 
-## Round 2 (agent) - @claude-opus-4-7
+## Turn 3 (agent) - @claude-opus-4-7
 
 Got it. Noted this file moves into `examples/` at the end.
 
@@ -137,7 +137,7 @@ Once you answer these I'll stop asking in this thread and start committing. Any 
 
 ---
 
-## Round 3 (human) - @fgrehm
+## Turn 4 (human) - @fgrehm
 
 > ### Two tight clarifying questions before I scaffold
 >
@@ -151,7 +151,7 @@ All is good, but I wonder if a `Makefile` is something nodejs/bun projects do? T
 
 ---
 
-## Round 4 (agent) - @claude-opus-4-7
+## Turn 5 (agent) - @claude-opus-4-7
 
 Fair push. Makefiles exist in Node projects but are not idiomatic. The ecosystem default is `package.json` scripts, run via `bun run <script>`. `bun run` with no args already lists defined scripts, which covers the discoverability job that `make help` did in Go.
 
@@ -167,7 +167,7 @@ Green-light A? Then Q8 + Q9 are settled and I'll write an `## Outcome` section, 
 
 ---
 
-## Round 5 (human) - @fgrehm
+## Turn 6 (human) - @fgrehm
 
 approved
 

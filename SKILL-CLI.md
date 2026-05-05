@@ -13,7 +13,7 @@ The key words MUST, MUST NOT, SHOULD, and MAY in this document are to be interpr
 
 ## How to operate it
 
-1. **Confirm scope and context.** Before creating the file, you MUST have: the target artifact (what we want to ship), the core question or decision, and enough context to write round 1 without guessing. The prior chat counts as context; use what the human has already told you. If something needed is missing, ask in chat before creating the file.
+1. **Confirm scope and context.** Before creating the file, you MUST have the target artifact (what we want to ship), the core question or decision, and enough context to write the first turn without guessing. The prior chat counts as context, so use what the human has already told you. If something needed is missing, ask in chat before creating the file.
 
 2. **Create the thread** and capture the path:
    ```bash
@@ -36,16 +36,18 @@ The key words MUST, MUST NOT, SHOULD, and MAY in this document are to be interpr
    ```bash
    lazychat reply $FILE --as human
    ```
-   This opens their `$EDITOR` with your turn pre-quoted, so they can write inline. You MUST NOT keep writing past the current round.
+   This opens their `$EDITOR` with your turn pre-quoted, so they can write inline. You MUST NOT keep writing past your current turn.
 
 5. **Wait.** The user may reply in minutes, hours, or days. Do not nudge.
 
-6. **Re-read the thread when resuming:**
+6. **Re-read what you need.** If the human just replied to your last turn in this same session, `lazychat show "$FILE" --last 1` is enough. If you are resuming cold (new session, no context) or unsure where the thread stands, re-read end-to-end with `lazychat show "$FILE"`. Do not skim. The file is the source of truth. If the next move is not clear after re-reading, ask in chat or write a short refresher turn. Do not guess.
+
    ```bash
-   lazychat show "$FILE"             # full file on first read
-   lazychat show "$FILE" --since N   # turns at round N onward. N = the round you last wrote.
+   lazychat show "$FILE"             # full file (cold resume)
+   lazychat show "$FILE" --last 1    # most recent turn (catch-up in-session)
+   lazychat show "$FILE" --last N    # the last N turns
+   lazychat show "$FILE" --turn N    # the turn with id N
    ```
-   Do not skim. The file is the source of truth. If the next move is not clear after re-reading, ask in chat or write a short refresher round; do not guess.
 
 7. **Continue** with further `lazychat reply` calls. When the discussion has converged, close the thread:
    ```bash

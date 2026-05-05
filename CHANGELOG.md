@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## v0.0.4 - 2026-05-04
+
+### Added
+
+- **Pretty markdown rendering on `show` when stdout is a TTY.** `lazychat show` now detects `process.stdout.isTTY` and renders through [marked-terminal](https://github.com/mikaelbr/marked-terminal) for human readers (colors, code highlighting). On a pipe or redirect the output stays raw markdown so agents and tooling get a deterministic, parseable stream. No new flag, no new verb.
+- `lazychat --version` flag, sourced from `package.json`.
+
+### Changed
+
+- **Turn ids replace round numbers.** Headers are now `## Turn N (role)` with N monotonic across the whole thread (not paired by role). Two `(agent)` turns in a row are legal. Asymmetric threads no longer require a placeholder turn to advance. CLI `status`/`list` report `turns` instead of `rounds` (in both text and JSON output).
+- `lazychat show --since N` is gone. `--last [N]` (default 1) is the new catch-up flag and accepts an optional count, so `--last 3` prints the trailing three turns. `--round N` was renamed to `--turn N`.
+- `lazychat reply` success message is now role-aware: prints the appended turn id and a one-line `lazychat show <file> --last 1` hint targeted at the other side.
+- `lazychat new` prints a "Thread is ready" hint to stderr alongside the path on stdout, suggesting the next `lazychat reply` invocation.
+- Parser is strict: only `## Turn N (role)` headers are recognised. Existing files with `## Round N (role)` headers still parse (frontmatter and topic are read normally), but the legacy headers no longer match the turn regex, so `status` and `list` report `turns: 0` and `--turn N`/`--last N` see an empty thread. No migration is provided.
+- `lazychat reply` and `lazychat converge` refuse to write to files that carry legacy `## Round N (role)` headers at turn boundaries, with a hint to start a new thread or rewrite the headers manually. This avoids silently producing hybrid files where a fresh `## Turn 1 (role)` follows a legacy `Round` block. A turn body that merely quotes the legacy format inline does not trip the guard.
+- `examples/2026-04-23T1042-ts-port-open-questions.md`: turn headers migrated from `## Round N (role)` to `## Turn N (role)`, ids renumbered monotonically (1–6) so the file parses under the v0.0.4 strict regex. Body text untouched.
+- `examples/2026-04-16T1811-cli-packaging.md` and `examples/2026-04-21T1034-templates-and-skill.md`: moved to `examples/legacy/` with a README. They predate the canonical turn-header format and only parse partially (frontmatter and topic), with 0 turns.
+
 ## v0.0.3 - 2026-04-26
 
 ### Added
@@ -34,7 +52,7 @@
 - RFC 2119 keyword reference (MUST / MUST NOT / SHOULD / MAY) applied across Rules and Conventions.
 - `status` field (`open` / `converged`) in the template frontmatter.
 - `## Outcome` section and `status: converged` flip on thread convergence.
-- Worked example of the v0.0.2 design process at `examples/2026-04-21T1034-templates-and-skill.md`.
+- Worked example of the v0.0.2 design process at `examples/legacy/2026-04-21T1034-templates-and-skill.md` (moved to `legacy/` in v0.0.4 because its non-canonical headers stop parsing under the strict turn-id regex).
 
 ### Changed
 

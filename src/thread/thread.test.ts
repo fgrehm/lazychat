@@ -8,9 +8,9 @@ import {
   appendTurn,
   converge,
   listThreads,
-  maxRound,
+  maxTurn,
   newThread,
-  nextRound,
+  nextTurnId,
   parse,
   parseBytes,
   slugifyTopic,
@@ -21,8 +21,8 @@ import {
 // helpers
 // ---------------------------------------------------------------------------
 
-function t(round: number, role: "agent" | "human"): Turn {
-  return { round, role, model: "", body: "", raw: "" };
+function t(id: number, role: "agent" | "human"): Turn {
+  return { id, role, model: "", body: "", raw: "" };
 }
 
 function threadFile(body: string, fm = "status: open") {
@@ -30,13 +30,13 @@ function threadFile(body: string, fm = "status: open") {
 }
 
 function turnBlock(
-  round: number,
+  id: number,
   role: "agent" | "human",
   model?: string,
   body = "body",
 ) {
   const attr = model ? ` - @${model}` : "";
-  return `## Round ${round} (${role})${attr}\n\n${body}`;
+  return `## Turn ${id} (${role})${attr}\n\n${body}`;
 }
 
 let dir: string;
@@ -100,67 +100,47 @@ describe("timestampedPath", () => {
 });
 
 // ---------------------------------------------------------------------------
-// nextRound: 11-case truth table
+// nextTurnId: monotonic, role-independent
 // ---------------------------------------------------------------------------
 
-describe("nextRound", () => {
-  test("empty thread + agent -> 1", () => {
-    expect(nextRound([], "agent")).toBe(1);
+describe("nextTurnId", () => {
+  test("empty thread -> 1", () => {
+    expect(nextTurnId([])).toBe(1);
   });
 
-  test("empty thread + human -> 1", () => {
-    expect(nextRound([], "human")).toBe(1);
+  test("after a single agent turn -> 2", () => {
+    expect(nextTurnId([t(1, "agent")])).toBe(2);
   });
 
-  test("agent after agent round N -> N+1", () => {
-    expect(nextRound([t(1, "agent")], "agent")).toBe(2);
+  test("after a single human turn -> 2", () => {
+    expect(nextTurnId([t(1, "human")])).toBe(2);
   });
 
-  test("human after agent round N -> N (no human at max)", () => {
-    expect(nextRound([t(1, "agent")], "human")).toBe(1);
+  test("two agent turns in a row are legal (asymmetric thread)", () => {
+    expect(nextTurnId([t(1, "agent"), t(2, "agent")])).toBe(3);
   });
 
-  test("agent after human round N -> N+1", () => {
-    expect(nextRound([t(1, "human")], "agent")).toBe(2);
+  test("tolerates gaps (ids 1 and 3 -> next = 4)", () => {
+    expect(nextTurnId([t(1, "agent"), t(3, "agent")])).toBe(4);
   });
 
-  test("human after human round N -> N+1", () => {
-    expect(nextRound([t(1, "human")], "human")).toBe(2);
-  });
-
-  test("agent after complete round -> N+1", () => {
-    expect(nextRound([t(1, "agent"), t(1, "human")], "agent")).toBe(2);
-  });
-
-  test("human after complete round -> N+1 (human exists at max)", () => {
-    expect(nextRound([t(1, "agent"), t(1, "human")], "human")).toBe(2);
-  });
-
-  test("tolerates gaps (rounds 1 and 3 -> next agent = 4)", () => {
-    expect(nextRound([t(1, "agent"), t(3, "agent")], "agent")).toBe(4);
-  });
-
-  test("tolerates duplicates (two round 1 entries -> uses max not len)", () => {
-    expect(nextRound([t(1, "agent"), t(1, "agent")], "agent")).toBe(2);
-  });
-
-  test("human after agent-only round -> stays at max (no human at max)", () => {
-    expect(nextRound([t(1, "agent"), t(2, "agent")], "human")).toBe(2);
+  test("tolerates duplicates (uses max not length)", () => {
+    expect(nextTurnId([t(1, "agent"), t(1, "agent")])).toBe(2);
   });
 });
 
 // ---------------------------------------------------------------------------
-// maxRound
+// maxTurn
 // ---------------------------------------------------------------------------
 
-describe("maxRound", () => {
+describe("maxTurn", () => {
   test("empty thread -> 0", () => {
-    expect(maxRound([])).toBe(0);
+    expect(maxTurn([])).toBe(0);
   });
 
-  test("returns the largest round across gaps and duplicates", () => {
+  test("returns the largest id across gaps and duplicates", () => {
     expect(
-      maxRound([t(1, "agent"), t(3, "agent"), t(2, "human"), t(3, "human")]),
+      maxTurn([t(1, "agent"), t(3, "agent"), t(2, "human"), t(3, "human")]),
     ).toBe(3);
   });
 
@@ -170,7 +150,7 @@ describe("maxRound", () => {
     const big: Turn[] = Array.from({ length: 200_000 }, (_, i) =>
       t(i + 1, "agent"),
     );
-    expect(maxRound(big)).toBe(200_000);
+    expect(maxTurn(big)).toBe(200_000);
   });
 });
 
@@ -208,7 +188,7 @@ describe("parseBytes", () => {
 
   test("does not pick up H1 inside a turn body as the topic", () => {
     const raw =
-      "---\nstatus: open\n---\n\n---\n\n## Round 1 (human)\n\n# not the topic\n\nbody\n";
+      "---\nstatus: open\n---\n\n---\n\n## Turn 1 (human)\n\n# not the topic\n\nbody\n";
     expect(() => parseBytes("f.md", raw)).toThrow(/missing topic heading/);
   });
 
@@ -225,10 +205,28 @@ describe("parseBytes", () => {
   });
 
   test("tolerates annotations like (human, via chat) in turn headers", () => {
-    const body = "---\n\n## Round 1 (human, via chat)\n\nbody\n";
+    const body = "---\n\n## Turn 1 (human, via chat)\n\nbody\n";
     const th = parseBytes("f.md", threadFile(body));
     expect(th.turns).toHaveLength(1);
     expect(th.turns[0].role).toBe("human");
+  });
+
+  test("rejects legacy 'Round N (role)' headers (strict parser)", () => {
+    const body = "---\n\n## Round 1 (human)\n\nbody\n";
+    const th = parseBytes("f.md", threadFile(body));
+    expect(th.turns).toHaveLength(0);
+  });
+
+  test("rejects 'Turn 0' (id must be a positive integer)", () => {
+    const body = "---\n\n## Turn 0 (human)\n\nbody\n";
+    const th = parseBytes("f.md", threadFile(body));
+    expect(th.turns).toHaveLength(0);
+  });
+
+  test("rejects 'Turn 01' (no leading zeros)", () => {
+    const body = "---\n\n## Turn 01 (human)\n\nbody\n";
+    const th = parseBytes("f.md", threadFile(body));
+    expect(th.turns).toHaveLength(0);
   });
 
   test("captures agent model attribution after the separator", () => {
@@ -241,13 +239,13 @@ describe("parseBytes", () => {
     const body = [
       "---",
       "",
-      "## Round 1 (human) - @fgrehm",
+      "## Turn 1 (human) - @fgrehm",
       "",
       "hyphen body",
       "",
       "---",
       "",
-      "## Round 2 (human) – @fgrehm",
+      "## Turn 2 (human) – @fgrehm",
       "",
       "en-dash body",
     ].join("\n");
@@ -263,7 +261,7 @@ describe("parseBytes", () => {
     const body = [
       "---",
       "",
-      "## Round 1 (human)",
+      "## Turn 1 (human)",
       "",
       "intro paragraph",
       "",
@@ -273,7 +271,7 @@ describe("parseBytes", () => {
       "",
       "---",
       "",
-      "## Round 2 (agent) - @claude",
+      "## Turn 2 (agent) - @claude",
       "",
       "reply",
     ].join("\n");
@@ -289,7 +287,7 @@ describe("parseBytes", () => {
     const body = [
       "---",
       "",
-      "## Round 1 (human)",
+      "## Turn 1 (human)",
       "",
       "body with rule",
       "",
@@ -316,7 +314,7 @@ describe("parseBytes", () => {
     expect(th.turns[0].model).toBe("");
   });
 
-  test("tolerates gaps and duplicate round numbers", () => {
+  test("tolerates gaps and duplicate turn ids", () => {
     const body = [
       "---",
       "",
@@ -332,7 +330,7 @@ describe("parseBytes", () => {
     ].join("\n");
     const th = parseBytes("f.md", threadFile(body));
     expect(th.turns).toHaveLength(3);
-    expect(th.turns.map((t) => t.round)).toEqual([1, 3, 1]);
+    expect(th.turns.map((t) => t.id)).toEqual([1, 3, 1]);
   });
 
   test("detects ## Outcome section", () => {
@@ -352,7 +350,7 @@ describe("parseBytes", () => {
     const body = [
       "---",
       "",
-      "## Round 1 (agent) - @claude",
+      "## Turn 1 (agent) - @claude",
       "",
       "When converged, lazychat appends a section like:",
       "",
@@ -376,7 +374,7 @@ describe("parseBytes", () => {
     const body = [
       "---",
       "",
-      "## Round 1 (human)",
+      "## Turn 1 (human)",
       "",
       "body text",
       "",
@@ -396,7 +394,7 @@ describe("parseBytes", () => {
     const body = [
       "---",
       "",
-      "## Round 1 (agent)",
+      "## Turn 1 (agent)",
       "",
       "    indented code",
       "    more code",
@@ -502,7 +500,7 @@ describe("appendTurn", () => {
     await newThread(path, "slug", "ctx");
     await appendTurn(path, "agent", "claude-opus-4-7", "hello");
     const data = await Bun.file(path).text();
-    expect(data).toContain("## Round 1 (agent) - @claude-opus-4-7");
+    expect(data).toContain("## Turn 1 (agent) - @claude-opus-4-7");
     expect(data).toContain("hello");
   });
 
@@ -513,7 +511,7 @@ describe("appendTurn", () => {
     await appendTurn(path, "human", "", "reply");
     const data = await Bun.file(path).text();
     // Header line must end right after the role parens, no attribution.
-    expect(data).toMatch(/^## Round 1 \(human\)\s*$/m);
+    expect(data).toMatch(/^## Turn 2 \(human\)\s*$/m);
   });
 
   test("ignores model for human turns", async () => {
@@ -522,18 +520,27 @@ describe("appendTurn", () => {
     await appendTurn(path, "agent", "m", "first");
     await appendTurn(path, "human", "some-model", "reply");
     const data = await Bun.file(path).text();
-    expect(data).toContain("## Round 1 (human)\n");
+    expect(data).toContain("## Turn 2 (human)\n");
   });
 
-  test("numbers rounds per nextRound rules", async () => {
+  test("numbers turn ids monotonically across roles", async () => {
     const path = join(dir, "thread.md");
     await newThread(path, "slug", "ctx");
     const r1 = await appendTurn(path, "agent", "m", "a1");
     const r2 = await appendTurn(path, "human", "", "h1");
     const r3 = await appendTurn(path, "agent", "m", "a2");
     expect(r1).toBe(1);
-    expect(r2).toBe(1);
-    expect(r3).toBe(2);
+    expect(r2).toBe(2);
+    expect(r3).toBe(3);
+  });
+
+  test("two consecutive agent turns get distinct ids (asymmetric thread)", async () => {
+    const path = join(dir, "thread.md");
+    await newThread(path, "slug", "ctx");
+    const r1 = await appendTurn(path, "agent", "m", "a1");
+    const r2 = await appendTurn(path, "agent", "m", "a2");
+    expect(r1).toBe(1);
+    expect(r2).toBe(2);
   });
 
   test("defaults model to 'unknown' when empty for agent turns", async () => {
@@ -554,6 +561,30 @@ describe("appendTurn", () => {
     );
   });
 
+  test("refuses to write to a file with legacy 'Round N (role)' headers", async () => {
+    const path = join(dir, "thread.md");
+    const content =
+      "---\nstatus: open\n---\n\n# slug\n\n<!-- ctx -->\n\n---\n\n## Round 1 (human)\n\nlegacy body\n";
+    await writeFile(path, content);
+    await expect(appendTurn(path, "agent", "m", "reply")).rejects.toThrow(
+      /legacy '## Round N \(role\)' headers/,
+    );
+  });
+
+  test("allows appending when a Turn body merely quotes a legacy header", async () => {
+    // A modern thread that discusses or quotes the legacy format inline
+    // must not trip the legacy-headers guard. Detection requires the
+    // `## Round N (role)` line to sit at a turn boundary (preceded by
+    // `---`), not just appear anywhere in the file.
+    const path = join(dir, "thread.md");
+    await newThread(path, "slug", "ctx");
+    const quoting =
+      "Earlier threads used headers like:\n\n    ## Round 1 (agent)\n\nWe migrated those.";
+    await appendTurn(path, "agent", "m", quoting);
+    const id = await appendTurn(path, "human", "", "ok, agreed");
+    expect(id).toBe(2);
+  });
+
   test("preserves extra frontmatter fields on write", async () => {
     const path = join(dir, "thread.md");
     const content =
@@ -569,7 +600,7 @@ describe("appendTurn", () => {
     // strip them and mutate the prior turn body, breaking append-only.
     const path = join(dir, "thread.md");
     const content =
-      "---\nstatus: open\n---\n\n# slug\n\n<!-- ctx -->\n\n---\n\n## Round 1 (agent) - @m\n\nfirst line  \nsecond line\n";
+      "---\nstatus: open\n---\n\n# slug\n\n<!-- ctx -->\n\n---\n\n## Turn 1 (agent) - @m\n\nfirst line  \nsecond line\n";
     await writeFile(path, content);
     await appendTurn(path, "human", "", "reply");
     const data = await Bun.file(path).text();
@@ -612,7 +643,7 @@ describe("converge", () => {
   test("preserves trailing whitespace on the prior last line", async () => {
     const path = join(dir, "thread.md");
     const content =
-      "---\nstatus: open\n---\n\n# slug\n\n<!-- ctx -->\n\n---\n\n## Round 1 (agent) - @m\n\nfirst line  \nsecond line\n";
+      "---\nstatus: open\n---\n\n# slug\n\n<!-- ctx -->\n\n---\n\n## Turn 1 (agent) - @m\n\nfirst line  \nsecond line\n";
     await writeFile(path, content);
     await converge(path, "done");
     const data = await Bun.file(path).text();
@@ -635,6 +666,16 @@ describe("converge", () => {
     await newThread(path, "slug", "ctx");
     await converge(path, "done");
     await expect(converge(path, "again")).rejects.toThrow("already converged");
+  });
+
+  test("refuses to converge a file with legacy 'Round N (role)' headers", async () => {
+    const path = join(dir, "thread.md");
+    const content =
+      "---\nstatus: open\n---\n\n# slug\n\n<!-- ctx -->\n\n---\n\n## Round 1 (human)\n\nlegacy body\n";
+    await writeFile(path, content);
+    await expect(converge(path, "outcome")).rejects.toThrow(
+      /legacy '## Round N \(role\)' headers/,
+    );
   });
 
   test("flips status with arbitrary whitespace (status:open, status:  open)", async () => {
@@ -733,13 +774,13 @@ describe("listThreads", () => {
     expect(result[0].topic).toBe("valid");
   });
 
-  test("rounds reflects max round number", async () => {
+  test("turns reflects max turn id", async () => {
     const path = join(dir, "a.md");
     await newThread(path, "slug", "ctx");
     await appendTurn(path, "agent", "m", "a1");
     await appendTurn(path, "human", "", "h1");
     await appendTurn(path, "agent", "m", "a2");
     const result = await listThreads(dir, "all");
-    expect(result[0].rounds).toBe(2);
+    expect(result[0].turns).toBe(3);
   });
 });

@@ -13,7 +13,7 @@ export type Role = "agent" | "human";
 export type Status = "open" | "converged";
 
 export interface Turn {
-  round: number;
+  id: number;
   role: Role;
   model: string;
   body: string;
@@ -27,6 +27,7 @@ export interface Thread {
   topic: string;
   turns: Turn[];
   hasOutcome: boolean;
+  hasLegacyHeaders: boolean;
   updatedAt: Date;
 }
 
@@ -34,7 +35,7 @@ export interface Summary {
   path: string;
   status: Status;
   topic: string;
-  rounds: number;
+  turns: number;
   updatedAt: Date;
 }
 
@@ -42,9 +43,9 @@ export type ListFilter = "open" | "converged" | "all";
 
 // Pure core
 
-export function maxRound(turns: Turn[]): number {
+export function maxTurn(turns: Turn[]): number {
   let max = 0;
-  for (const t of turns) if (t.round > max) max = t.round;
+  for (const t of turns) if (t.id > max) max = t.id;
   return max;
 }
 
@@ -61,12 +62,8 @@ export function timestampedPath(dir: string, slug: string, now: Date): string {
   return join(dir, `${ts}-${slug}.md`);
 }
 
-export function nextRound(turns: Turn[], role: Role): number {
-  if (turns.length === 0) return 1;
-  const max = maxRound(turns);
-  if (role === "agent") return max + 1;
-  const humanAtMax = turns.some((t) => t.round === max && t.role === "human");
-  return humanAtMax ? max + 1 : max;
+export function nextTurnId(turns: Turn[]): number {
+  return maxTurn(turns) + 1;
 }
 
 const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
@@ -75,8 +72,13 @@ const H1_RE = /^# (.+)$/m;
 // Attribution separator is a plain hyphen on write. Parse also accepts
 // en-dash (U+2013) and em-dash (U+2014) so older threads and hand-typed
 // turns still parse cleanly. Tolerates annotations like (human, via chat).
+// Turn ids are positive integers without leading zeros, matching what the
+// CLI selectors (`--turn N`, `--last N`) accept.
 const TURN_HEADER_RE =
-  /^##\s+Round\s+(\d+)\s+\((agent|human)(?:,[^)]*)?\)(?:\s*[-–—]\s*@(\S+))?\s*$/;
+  /^##\s+Turn\s+([1-9]\d*)\s+\((agent|human)(?:,[^)]*)?\)(?:\s*[-–—]\s*@(\S+))?\s*$/;
+// Per-line, no `m` flag: callers test individual lines and must verify the
+// line sits at a turn boundary before treating it as a legacy header.
+const LEGACY_TURN_HEADER_RE = /^##\s+Round\s+\d+\s+\((agent|human)\b/;
 const OUTCOME_RE = /^##\s+Outcome\s*$/m;
 
 export function parseBytes(path: string, data: string): Thread {
@@ -138,11 +140,27 @@ export function parseBytes(path: string, data: string): Thread {
     }
   }
 
+  // hasLegacyHeaders mirrors the boundary discipline above: a `## Round N
+  // (role)` line is only treated as a legacy header when it sits at a
+  // section boundary (preceded by `---` after optional blanks). A turn
+  // body that merely quotes the literal string `## Round 1 (agent)` does
+  // not trip this flag.
+  let hasLegacyHeaders = false;
+  for (let i = 0; i < lines.length; i++) {
+    if (!LEGACY_TURN_HEADER_RE.test(lines[i])) continue;
+    let j = i - 1;
+    while (j >= 0 && lines[j] === "") j--;
+    if (j >= 0 && lines[j] === "---") {
+      hasLegacyHeaders = true;
+      break;
+    }
+  }
+
   for (let i = 0; i < lines.length; i++) {
     const m = lines[i].match(TURN_HEADER_RE);
     if (!m) continue;
 
-    const round = parseInt(m[1], 10);
+    const id = parseInt(m[1], 10);
     const role = m[2] as Role;
     const model = m[3] ?? "";
     const headerLine = lines[i];
@@ -163,7 +181,7 @@ export function parseBytes(path: string, data: string): Thread {
     while (bs < be && bodyLines[bs] === "") bs++;
     while (be > bs && bodyLines[be - 1] === "") be--;
     turns.push({
-      round,
+      id,
       role,
       model,
       body: bodyLines.slice(bs, be).join("\n"),
@@ -178,6 +196,7 @@ export function parseBytes(path: string, data: string): Thread {
     topic,
     turns,
     hasOutcome,
+    hasLegacyHeaders,
     updatedAt: new Date(0),
   };
 }
@@ -233,6 +252,21 @@ export async function newThread(
   }
 }
 
+// Refuse to write to files whose parsed structure still carries legacy
+// `## Round N (role)` headers at turn-boundary positions. Without this
+// guard appendTurn() would silently produce a hybrid file (legacy rounds
+// at the top, fresh `## Turn 1 (role)` appended at the bottom), which
+// restarts ids and confuses every consumer downstream.
+function assertNoLegacyHeaders(thread: Thread): void {
+  if (thread.hasLegacyHeaders) {
+    throw new Error(
+      `${thread.path}: file contains legacy '## Round N (role)' headers. ` +
+        `lazychat v0.0.4 does not migrate these. Start a new thread or ` +
+        `manually rewrite the headers to '## Turn N (role)' before appending.`,
+    );
+  }
+}
+
 export async function appendTurn(
   path: string,
   role: Role,
@@ -245,18 +279,19 @@ export async function appendTurn(
   if (thread.status === "converged") {
     throw new Error(`${path}: thread is converged; cannot append turn`);
   }
+  assertNoLegacyHeaders(thread);
 
-  const round = nextRound(thread.turns, role);
+  const id = nextTurnId(thread.turns);
   const effectiveModel = role === "agent" ? model || "unknown" : "";
   const attr = effectiveModel ? ` - @${effectiveModel}` : "";
-  const header = `## Round ${round} (${role})${attr}`;
+  const header = `## Turn ${id} (${role})${attr}`;
 
   await atomicWrite(
     path,
     data.replace(/\n+$/, "") +
       `\n\n---\n\n${header}\n\n${body.replace(/\n+$/, "")}\n`,
   );
-  return round;
+  return id;
 }
 
 export async function converge(path: string, body: string): Promise<void> {
@@ -266,6 +301,7 @@ export async function converge(path: string, body: string): Promise<void> {
   if (thread.status === "converged") {
     throw new Error(`${path}: thread is already converged`);
   }
+  assertNoLegacyHeaders(thread);
 
   // Flip status only within the frontmatter block. A naive file-wide replace
   // would rewrite a literal `status: open` line that happens to appear inside
@@ -309,7 +345,7 @@ export async function listThreads(
             path: filePath,
             status: thread.status,
             topic: thread.topic,
-            rounds: maxRound(thread.turns),
+            turns: maxTurn(thread.turns),
             updatedAt: mtime,
           };
         } catch {
