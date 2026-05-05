@@ -571,6 +571,20 @@ describe("appendTurn", () => {
     );
   });
 
+  test("allows appending when a Turn body merely quotes a legacy header", async () => {
+    // A modern thread that discusses or quotes the legacy format inline
+    // must not trip the legacy-headers guard. Detection requires the
+    // `## Round N (role)` line to sit at a turn boundary (preceded by
+    // `---`), not just appear anywhere in the file.
+    const path = join(dir, "thread.md");
+    await newThread(path, "slug", "ctx");
+    const quoting =
+      "Earlier threads used headers like:\n\n    ## Round 1 (agent)\n\nWe migrated those.";
+    await appendTurn(path, "agent", "m", quoting);
+    const id = await appendTurn(path, "human", "", "ok, agreed");
+    expect(id).toBe(2);
+  });
+
   test("preserves extra frontmatter fields on write", async () => {
     const path = join(dir, "thread.md");
     const content =

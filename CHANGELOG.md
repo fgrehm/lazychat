@@ -14,6 +14,7 @@
 - `lazychat reply` success message is now role-aware: prints the appended turn id and a one-line `lazychat show <file> --last 1` hint targeted at the other side.
 - `lazychat new` prints a "Thread is ready" hint to stderr alongside the path on stdout, suggesting the next `lazychat reply` invocation.
 - Parser is strict: only `## Turn N (role)` headers are recognised. Existing files with `## Round N (role)` headers still parse (frontmatter and topic are read normally), but the legacy headers no longer match the turn regex, so `status` and `list` report `turns: 0` and `--turn N`/`--last N` see an empty thread. No migration is provided.
+- `lazychat reply` and `lazychat converge` refuse to write to files that carry legacy `## Round N (role)` headers at turn boundaries, with a hint to start a new thread or rewrite the headers manually. This avoids silently producing hybrid files where a fresh `## Turn 1 (role)` follows a legacy `Round` block. A turn body that merely quotes the legacy format inline does not trip the guard.
 - `examples/2026-04-23T1042-ts-port-open-questions.md`: turn headers migrated from `## Round N (role)` to `## Turn N (role)`, ids renumbered monotonically (1–6) so the file parses under the v0.0.4 strict regex. Body text untouched.
 - `examples/2026-04-16T1811-cli-packaging.md` and `examples/2026-04-21T1034-templates-and-skill.md`: moved to `examples/legacy/` with a README. They predate the canonical turn-header format and only parse partially (frontmatter and topic), with 0 turns.
 

@@ -27,6 +27,7 @@ export interface Thread {
   topic: string;
   turns: Turn[];
   hasOutcome: boolean;
+  hasLegacyHeaders: boolean;
   updatedAt: Date;
 }
 
@@ -75,7 +76,9 @@ const H1_RE = /^# (.+)$/m;
 // CLI selectors (`--turn N`, `--last N`) accept.
 const TURN_HEADER_RE =
   /^##\s+Turn\s+([1-9]\d*)\s+\((agent|human)(?:,[^)]*)?\)(?:\s*[-–—]\s*@(\S+))?\s*$/;
-const LEGACY_TURN_HEADER_RE = /^##\s+Round\s+\d+\s+\((agent|human)\b/m;
+// Per-line, no `m` flag: callers test individual lines and must verify the
+// line sits at a turn boundary before treating it as a legacy header.
+const LEGACY_TURN_HEADER_RE = /^##\s+Round\s+\d+\s+\((agent|human)\b/;
 const OUTCOME_RE = /^##\s+Outcome\s*$/m;
 
 export function parseBytes(path: string, data: string): Thread {
@@ -137,6 +140,22 @@ export function parseBytes(path: string, data: string): Thread {
     }
   }
 
+  // hasLegacyHeaders mirrors the boundary discipline above: a `## Round N
+  // (role)` line is only treated as a legacy header when it sits at a
+  // section boundary (preceded by `---` after optional blanks). A turn
+  // body that merely quotes the literal string `## Round 1 (agent)` does
+  // not trip this flag.
+  let hasLegacyHeaders = false;
+  for (let i = 0; i < lines.length; i++) {
+    if (!LEGACY_TURN_HEADER_RE.test(lines[i])) continue;
+    let j = i - 1;
+    while (j >= 0 && lines[j] === "") j--;
+    if (j >= 0 && lines[j] === "---") {
+      hasLegacyHeaders = true;
+      break;
+    }
+  }
+
   for (let i = 0; i < lines.length; i++) {
     const m = lines[i].match(TURN_HEADER_RE);
     if (!m) continue;
@@ -177,6 +196,7 @@ export function parseBytes(path: string, data: string): Thread {
     topic,
     turns,
     hasOutcome,
+    hasLegacyHeaders,
     updatedAt: new Date(0),
   };
 }
@@ -232,14 +252,15 @@ export async function newThread(
   }
 }
 
-// Refuse to write to files that still carry legacy `## Round N (role)`
-// headers. Without this check we'd silently produce a hybrid file (legacy
-// rounds at the top, fresh `## Turn 1 (role)` appended at the bottom),
-// which restarts ids and confuses every consumer downstream.
-function assertNoLegacyHeaders(path: string, data: string): void {
-  if (LEGACY_TURN_HEADER_RE.test(data)) {
+// Refuse to write to files whose parsed structure still carries legacy
+// `## Round N (role)` headers at turn-boundary positions. Without this
+// guard appendTurn() would silently produce a hybrid file (legacy rounds
+// at the top, fresh `## Turn 1 (role)` appended at the bottom), which
+// restarts ids and confuses every consumer downstream.
+function assertNoLegacyHeaders(thread: Thread): void {
+  if (thread.hasLegacyHeaders) {
     throw new Error(
-      `${path}: file contains legacy '## Round N (role)' headers. ` +
+      `${thread.path}: file contains legacy '## Round N (role)' headers. ` +
         `lazychat v0.0.4 does not migrate these. Start a new thread or ` +
         `manually rewrite the headers to '## Turn N (role)' before appending.`,
     );
@@ -258,7 +279,7 @@ export async function appendTurn(
   if (thread.status === "converged") {
     throw new Error(`${path}: thread is converged; cannot append turn`);
   }
-  assertNoLegacyHeaders(path, data);
+  assertNoLegacyHeaders(thread);
 
   const id = nextTurnId(thread.turns);
   const effectiveModel = role === "agent" ? model || "unknown" : "";
@@ -280,7 +301,7 @@ export async function converge(path: string, body: string): Promise<void> {
   if (thread.status === "converged") {
     throw new Error(`${path}: thread is already converged`);
   }
-  assertNoLegacyHeaders(path, data);
+  assertNoLegacyHeaders(thread);
 
   // Flip status only within the frontmatter block. A naive file-wide replace
   // would rewrite a literal `status: open` line that happens to appear inside
